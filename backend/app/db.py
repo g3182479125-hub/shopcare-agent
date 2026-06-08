@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import sqlite3
@@ -144,7 +144,7 @@ def load_demo_seed_if_empty(conn: sqlite3.Connection) -> None:
     if not seed_path.exists():
         return
 
-    seed = json.loads(seed_path.read_text(encoding="utf-8"))
+    seed = json.loads(seed_path.read_text(encoding="utf-8-sig"))
     _insert_rows(conn, "orders", seed.get("orders", []))
     _insert_rows(conn, "users", seed.get("users", []))
     _insert_rows(conn, "aftersales_cases", seed.get("aftersales_cases", []))
