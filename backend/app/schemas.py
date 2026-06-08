@@ -31,6 +31,7 @@ class ChatResponse(BaseModel):
     policy_evidence: list[dict[str, Any]] = Field(default_factory=list)
     traces: list[ToolTrace] = Field(default_factory=list)
     llm_used: bool = False
+    llm_provider: Optional[str] = None
     image_analysis: Optional[dict[str, Any]] = None
 
 

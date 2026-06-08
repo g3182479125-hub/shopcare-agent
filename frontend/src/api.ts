@@ -154,7 +154,8 @@ function demoChat(message: string, orderId?: string, image?: File) {
     similar_cases: similarCases,
     policy_evidence: policyEvidence,
     traces,
-    llm_used: false,
+    llm_used: Boolean(imageAnalysis),
+    llm_provider: imageAnalysis ? 'kimi' : null,
     image_analysis: imageAnalysis
   }
 }

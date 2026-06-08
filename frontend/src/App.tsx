@@ -45,6 +45,7 @@ type ChatResult = {
   policy_evidence: Record<string, any>[]
   traces: Trace[]
   llm_used: boolean
+  llm_provider?: string | null
   image_analysis?: ImageAnalysis | null
 }
 
@@ -318,7 +319,7 @@ export default function App() {
           <Bot size={20} />
           <div>
             <h2>Agent 答复</h2>
-            <p>{result?.llm_used ? '由大模型综合生成。' : '由规则引擎快速兜底生成。'}</p>
+            <p>{result?.llm_provider === 'kimi' ? '由 Kimi 多模态模型识别图片凭证。' : result?.llm_provider === 'deepseek' ? '由 DeepSeek 综合生成。' : result?.llm_used ? '由大模型综合生成。' : '由规则引擎快速兜底生成。'}</p>
           </div>
         </div>
         {answerParagraphs.length ? (

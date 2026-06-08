@@ -15,7 +15,7 @@ class ShopCareAgent:
     def __init__(self, repository: ShopcareRepository) -> None:
         self.repository = repository
         self.settings = get_settings()
-        self.llm = OptionalLLMClient(self.settings)
+        self.text_llm = OptionalLLMClient(self.settings)
 
     async def run(
         self,
@@ -29,6 +29,7 @@ class ShopCareAgent:
         tools = ShopcareTools(self.repository)
         resolved_order_id = order_id or extract_order_id(message)
         image_analysis: dict[str, Any] | None = None
+        image_llm_used = False
 
         if image_bytes:
             image_trace, image_analysis = await self._analyze_image(
@@ -37,6 +38,7 @@ class ShopCareAgent:
                 order_id=resolved_order_id,
             )
             tools.traces.append(image_trace)
+            image_llm_used = image_trace.status == "ok"
             if image_analysis:
                 message = message + "\n" + _format_image_context(image_analysis)
 
@@ -59,17 +61,29 @@ class ShopCareAgent:
             decision=decision,
             image_analysis=image_analysis,
         )
-        llm_answer = self._llm_rewrite(
-            message=message,
-            intent=intent,
-            order=order,
-            user=user,
-            policy_hits=policy_hits,
-            similar_cases=similar_cases,
-            decision=decision,
-            image_analysis=image_analysis,
-            session_id=session_id,
-        )
+
+        # Model routing:
+        # - With an image, Kimi is the only model provider. We use its multimodal
+        #   evidence and keep the final decision deterministic for speed.
+        # - Without an image, DeepSeek/OpenAI-compatible text LLM rewrites the reply.
+        llm_answer: str | None = None
+        llm_provider: str | None = None
+        if image_bytes:
+            llm_provider = "kimi" if image_llm_used else None
+        else:
+            llm_answer = self._deepseek_rewrite(
+                message=message,
+                intent=intent,
+                order=order,
+                user=user,
+                policy_hits=policy_hits,
+                similar_cases=similar_cases,
+                decision=decision,
+                image_analysis=image_analysis,
+                session_id=session_id,
+            )
+            if llm_answer:
+                llm_provider = self.settings.llm_provider or "deepseek"
 
         return ChatResponse(
             answer=llm_answer or fallback_answer,
@@ -80,11 +94,18 @@ class ShopCareAgent:
             similar_cases=similar_cases,
             policy_evidence=policy_hits,
             traces=tools.traces,
-            llm_used=bool(llm_answer),
+            llm_used=bool(llm_answer) or image_llm_used,
+            llm_provider=llm_provider,
             image_analysis=image_analysis,
         )
 
-    async def _analyze_image(self, *, image_bytes: bytes, image_type: str, order_id: str | None) -> tuple[ToolTrace, dict[str, Any] | None]:
+    async def _analyze_image(
+        self,
+        *,
+        image_bytes: bytes,
+        image_type: str,
+        order_id: str | None,
+    ) -> tuple[ToolTrace, dict[str, Any] | None]:
         order_context: dict[str, Any] = {}
         if order_id:
             order = self.repository.get_order(order_id)
@@ -103,7 +124,7 @@ class ShopCareAgent:
         analysis = result.get("analysis") if result.get("success") else None
         trace = ToolTrace(
             tool_name="ImageAnalysisAgent",
-            label="Kimi 视觉Agent",
+            label="Kimi 视觉 Agent",
             input={"image_type": image_type, "size_bytes": len(image_bytes), "order_id": order_id},
             output=analysis or {"error": result.get("error", "image analysis failed")},
             status="ok" if result.get("success") else "error",
@@ -112,15 +133,16 @@ class ShopCareAgent:
         )
         return trace, analysis
 
-    def _llm_rewrite(self, **payload: Any) -> str | None:
-        if not self.llm.enabled:
+    def _deepseek_rewrite(self, **payload: Any) -> str | None:
+        if not self.text_llm.enabled:
             return None
         system = (
-            "你是电商售后智能客服。你只能基于给定 JSON 里的订单、用户、政策、相似案例、图片分析和决策输出回答，"
-            "不得虚构退款金额、订单状态或政策。回答要简洁、专业，并说明处理依据。"
+            "你是电商售后智能客服。你只能基于给定 JSON 里的订单、用户、政策、"
+            "相似案例和决策输出回答，不得虚构退款金额、订单状态或政策。"
+            "回答要简洁、专业，并说明处理依据。"
         )
         user = "请根据以下结构化上下文生成中文售后答复：\n" + json.dumps(payload, ensure_ascii=False, default=str)
-        return self.llm.complete(system=system, user=user)
+        return self.text_llm.complete(system=system, user=user)
 
     def _compose_answer(
         self,
@@ -138,21 +160,27 @@ class ShopCareAgent:
             return "我需要先确认订单号，才能判断是否支持退款、退货、换货或补发。请提供订单号，并简单描述商品问题。"
 
         lines = [
-            f"订单 {order.get('order_id')} 当前状态为 {order.get('order_status')}，商品为 {order.get('product_name')}，类目 {order.get('category')}，金额 {order.get('amount')} 元。"
+            f"您好，订单 {order.get('order_id')} 当前状态为 {order.get('order_status')}，商品为 {order.get('product_name')}，类目为 {order.get('category')}，金额 {order.get('amount')} 元。"
         ]
         if user:
-            lines.append(f"用户等级为 {user.get('user_tier')}，历史购买 {user.get('total_purchase_times')} 次，累计消费 {user.get('total_purchase_amount')} 元。")
+            lines.append(
+                f"您的用户等级为 {user.get('user_tier')}，历史购买 {user.get('total_purchase_times')} 次，累计消费 {user.get('total_purchase_amount')} 元。"
+            )
         if image_analysis:
             details = "、".join(image_analysis.get("damage_details") or [])
+            valid_text = "有效" if image_analysis.get("evidence_valid") else "暂不充分"
             lines.append(
-                f"图片凭证显示：{image_analysis.get('product_condition')}；损坏详情：{details or '未识别到明确损坏点'}；"
-                f"凭证有效：{'是' if image_analysis.get('evidence_valid') else '否'}。"
+                f"Kimi 图片凭证分析显示：{image_analysis.get('product_condition')}。"
+                f"损坏详情：{details or '未识别到明确损坏点'}；凭证判断：{valid_text}。"
             )
-        lines.append(f"建议处理：{decision.get('resolution')}，当前判断为 {decision.get('status')}。原因：{decision.get('reason')}")
+        lines.append(
+            f"建议处理方案：{decision.get('resolution')}，当前判断为 {decision.get('status')}。原因：{decision.get('reason')}"
+        )
         next_steps = "；".join(decision.get("next_steps") or [])
-        lines.append(f"下一步：{next_steps}")
+        if next_steps:
+            lines.append(f"下一步：{next_steps}。")
         if policy_hits:
-            lines.append(f"参考政策：{policy_hits[0].get('title')}。")
+            lines.append(f"处理依据：{policy_hits[0].get('title')}。")
         if similar_cases:
             lines.append(f"系统检索到 {len(similar_cases)} 条相似售后案例，常见处理方式包括 {similar_cases[0].get('resolution')}。")
         lines.append("该问题建议转人工复核。" if decision.get("need_human_review") else "暂不需要人工介入，可按流程继续处理。")
@@ -160,9 +188,9 @@ class ShopCareAgent:
 
 
 def _format_image_context(analysis: dict[str, Any]) -> str:
-    details = ", ".join(analysis.get("damage_details") or [])
+    details = "、".join(analysis.get("damage_details") or [])
     return f"""
-[图片分析结果（来自视觉Agent）]
+[图片分析结果（来自 Kimi 视觉 Agent）]
 商品状态：{analysis.get('product_condition')}
 损坏详情：{details}
 严重程度：{analysis.get('severity')}
