@@ -78,6 +78,22 @@ npm run dev
 http://localhost:5173
 ```
 
+
+
+## 图片凭证与视觉 Agent
+
+系统支持在售后问题输入框中粘贴、拖拽或上传一张商品问题图片。前端会用 `multipart/form-data` 提交图片，后端先调用 `ImageAnalysisAgent` 进行视觉分析，再把图片分析结果注入原有订单查询、政策 RAG、相似案例检索和售后决策流程。
+
+图片分析使用 Kimi 视觉模型，相关环境变量：
+
+```env
+KIMI_API_KEY=
+KIMI_BASE_URL=https://api.moonshot.cn/v1
+KIMI_MODEL=moonshot-v1-8k-vision-preview
+```
+
+没有配置 `KIMI_API_KEY` 或 Kimi 调用失败时，系统会在工具轨迹中记录错误，并继续执行原有售后决策流程。
+
 ## 公网部署
 
 具体步骤见 `docs/deployment.md`。推荐：

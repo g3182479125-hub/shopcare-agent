@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agent.orchestrator import ShopCareAgent
@@ -10,7 +10,7 @@ from app.schemas import ChatRequest, ChatResponse, DashboardSummary
 from app.services.repository import ShopcareRepository
 
 settings = get_settings()
-app = FastAPI(title=settings.app_name, version="0.1.0")
+app = FastAPI(title=settings.app_name, version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,10 +32,45 @@ def health() -> dict[str, str]:
 
 
 @app.post("/api/agent/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest) -> ChatResponse:
+async def chat(
+    request: Request,
+    message: str | None = Form(default=None),
+    order_id: str | None = Form(default=None),
+    session_id: str | None = Form(default=None),
+    image: UploadFile | None = File(default=None),
+) -> ChatResponse:
+    content_type = request.headers.get("content-type", "")
+    image_bytes: bytes | None = None
+    image_type: str | None = None
+
+    if content_type.startswith("application/json"):
+        try:
+            payload = ChatRequest.model_validate(await request.json())
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON payload: {exc}") from exc
+        message = payload.message
+        order_id = payload.order_id
+        session_id = payload.session_id
+    else:
+        if not message or not message.strip():
+            raise HTTPException(status_code=400, detail="message is required")
+        if image:
+            image_type = image.content_type or "application/octet-stream"
+            if not image_type.startswith("image/"):
+                raise HTTPException(status_code=400, detail="只支持 image/* 类型的图片")
+            image_bytes = await image.read()
+            if len(image_bytes) > 5 * 1024 * 1024:
+                raise HTTPException(status_code=400, detail="图片不能超过5MB")
+
     with get_connection() as conn:
         agent = ShopCareAgent(ShopcareRepository(conn))
-        return agent.run(payload.message, payload.order_id)
+        return await agent.run(
+            message=message.strip(),
+            order_id=order_id,
+            image_bytes=image_bytes,
+            image_type=image_type,
+            session_id=session_id,
+        )
 
 
 @app.get("/api/orders/{order_id}")

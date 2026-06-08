@@ -5,3 +5,4 @@ pydantic-settings>=2.3.0
 python-dotenv>=1.0.1
 openai>=1.40.0
 python-multipart>=0.0.9
+httpx>=0.24.0

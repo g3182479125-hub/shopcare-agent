@@ -97,6 +97,9 @@ LLM_PROVIDER=deepseek
 LLM_BASE_URL=https://api.deepseek.com
 LLM_MODEL=deepseek-chat
 LLM_API_KEY=你的 DeepSeek API Key
+KIMI_API_KEY=你的 Kimi API Key
+KIMI_BASE_URL=https://api.moonshot.cn/v1
+KIMI_MODEL=moonshot-v1-8k-vision-preview
 ALLOW_ORIGINS=https://shopcare-agent.vercel.app
 ```
 

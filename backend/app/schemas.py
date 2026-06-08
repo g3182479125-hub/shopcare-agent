@@ -8,14 +8,17 @@ from pydantic import BaseModel, Field
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     order_id: Optional[str] = None
+    session_id: Optional[str] = None
 
 
 class ToolTrace(BaseModel):
     tool_name: str
-    input: dict[str, Any]
+    input: Any
     output: Any
     status: str = "ok"
     elapsed_ms: int = 0
+    label: Optional[str] = None
+    summary: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -28,6 +31,7 @@ class ChatResponse(BaseModel):
     policy_evidence: list[dict[str, Any]] = Field(default_factory=list)
     traces: list[ToolTrace] = Field(default_factory=list)
     llm_used: bool = False
+    image_analysis: Optional[dict[str, Any]] = None
 
 
 class DashboardSummary(BaseModel):

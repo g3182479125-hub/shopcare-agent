@@ -33,11 +33,17 @@ class Settings:
         self.order_csv_path = get("ORDER_CSV_PATH")
         self.user_csv_path = get("USER_CSV_PATH")
         self.aftersales_csv_path = get("AFTERSALES_CSV_PATH", "E:/agnet/aftersales_cases.csv")
+
         self.llm_provider = get("LLM_PROVIDER", "deepseek")
         self.llm_api_key = get("LLM_API_KEY")
         self.llm_base_url = get("LLM_BASE_URL", "https://api.deepseek.com")
         self.llm_model = get("LLM_MODEL", "deepseek-chat")
         self.llm_temperature = float(get("LLM_TEMPERATURE", "0.2") or "0.2")
+
+        self.kimi_api_key = get("KIMI_API_KEY")
+        self.kimi_base_url = get("KIMI_BASE_URL", "https://api.moonshot.cn/v1")
+        self.kimi_model = get("KIMI_MODEL", "moonshot-v1-8k-vision-preview")
+
         self.allow_origins = get(
             "ALLOW_ORIGINS",
             get("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"),

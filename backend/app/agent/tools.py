@@ -10,12 +10,12 @@ from app.services.repository import ShopcareRepository
 
 
 INTENT_KEYWORDS = {
-    "refund": ["退款", "退钱", "取消", "不想要", "没发货"],
+    "refund": ["退款", "退钱", "取消", "不想要", "没发货", "未发货"],
     "return_refund": ["退货", "退掉", "七天无理由", "不合适", "不满意"],
     "exchange": ["换货", "换码", "尺码", "型号不对", "颜色不对"],
     "reship": ["少发", "漏发", "缺失", "配件", "赠品", "补发"],
     "logistics": ["物流", "快递", "没收到", "签收", "配送", "超时"],
-    "quality": ["坏", "故障", "破损", "质量", "不能用", "漏液", "不新鲜", "过敏"],
+    "quality": ["坏", "故障", "破损", "质量", "不能用", "漏液", "不新鲜", "过敏", "异常"],
     "invoice": ["发票", "抬头", "税号"],
     "complaint": ["投诉", "人工", "客服", "赔偿", "补偿"],
 }
@@ -85,7 +85,7 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
             "refund_amount": 0,
             "compensation_amount": 0,
             "reason": "需要订单号才能查询订单状态并判断售后路径。",
-            "next_steps": ["请补充订单号", "说明商品问题和期望处理方式"],
+            "next_steps": ["补充订单号", "说明商品问题和期望处理方式"],
         }
 
     status = order.get("order_status") or ""
@@ -94,6 +94,8 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
     fulfillment_hours = int(order.get("fulfillment_time") or 0)
     tier = (user or {}).get("user_tier") or "Regular"
     priority = "P1" if amount >= 5000 else ("P2" if tier in {"VIP", "HighValue"} else "P3")
+    has_valid_image_evidence = "凭证有效：是" in message
+    image_severe = "严重程度：严重" in message
 
     decision = {
         "status": "need_info",
@@ -106,7 +108,7 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
         "next_steps": ["上传商品问题照片或物流截图", "客服核验后给出最终处理"],
     }
 
-    if status in {"Pending", "Paid"} and intent in {"refund", "general_after_sales"}:
+    if status in {"Pending", "Paid", "PendingShipment"} and intent in {"refund", "general_after_sales"}:
         decision.update(
             status="approved",
             resolution="refund_only",
@@ -137,14 +139,15 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
         )
         return decision
 
-    if category == "食品生鲜" and intent == "quality":
+    if category in {"食品生鲜", "食品饮料"} and (intent == "quality" or has_valid_image_evidence):
         decision.update(
             status="approved",
             resolution="refund_only",
-            refund_amount=round(amount * 0.8, 2),
+            refund_amount=round(amount if has_valid_image_evidence else amount * 0.8, 2),
+            compensation_amount=10.0 if has_valid_image_evidence else 0.0,
             need_human_review=amount >= 5000,
-            reason="食品生鲜涉及新鲜度或破损问题，凭有效证据可优先仅退款或补偿。",
-            next_steps=["上传商品状态照片", "核验后发起仅退款"],
+            reason="食品类商品涉及新鲜度、包装破损或食用安全，凭有效图片证据可优先仅退款或补偿。",
+            next_steps=["保留商品和包装照片", "核验后发起仅退款", "必要时追加补偿券"],
         )
         return decision
 
@@ -180,11 +183,12 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
     if intent in {"return_refund", "quality"}:
         if fulfillment_hours <= 168 or intent == "quality":
             decision.update(
-                status="approved" if intent == "return_refund" else "need_info",
-                resolution="return_refund",
+                status="approved" if intent == "return_refund" or has_valid_image_evidence else "need_info",
+                resolution="return_refund" if not image_severe else "manual_review",
                 refund_amount=round(amount, 2) if intent == "return_refund" else 0,
-                reason="符合售后期内退货退款路径；质量问题需先补充凭证。",
-                next_steps=["确认商品完好或上传质量问题照片", "生成退货地址", "仓库验收后退款"],
+                need_human_review=image_severe or priority == "P1",
+                reason="符合售后期内退货退款路径；质量问题会结合图片凭证判断是否需要人工复核。",
+                next_steps=["确认商品状态或上传质量问题照片", "生成退货地址", "仓库验收后退款"],
             )
         else:
             decision.update(
