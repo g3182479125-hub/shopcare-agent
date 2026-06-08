@@ -93,3 +93,27 @@ def validate_decision(*, order: dict[str, Any] | None, decision: dict[str, Any])
         guardrails.append("修正非法优先级")
 
     return fixed, guardrails
+
+
+
+def detect_conversation_intent(message: str) -> str | None:
+    text = (message or "").strip().lower()
+    compact = "".join(text.split())
+    if not compact:
+        return None
+    identity_words = ["你是谁", "你是誰", "你叫什么", "你叫啥", "介绍一下自己", "你能做什么", "你会什么"]
+    greeting_words = ["你好", "您好", "hello", "hi", "在吗", "在不在"]
+    thanks_words = ["谢谢", "感谢", "辛苦了", "太好了", "好的谢谢"]
+    help_words = ["怎么用", "如何使用", "怎么操作", "流程是什么", "我该怎么做"]
+    if any(word in compact for word in identity_words):
+        return "identity"
+    if any(word in compact for word in greeting_words):
+        return "greeting"
+    if any(word in compact for word in thanks_words):
+        return "thanks"
+    if any(word in compact for word in help_words):
+        return "help"
+    # Very short non-business utterances are usually conversational turns.
+    if len(compact) <= 8 and not extract_order_from_text(compact) and not any(word in compact for word in ["退", "换", "坏", "破", "物流", "发票", "赔"]):
+        return "smalltalk"
+    return None

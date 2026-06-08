@@ -6,7 +6,7 @@ from app.agent.kimi_vision_agent import KimiVisionAgent
 from app.agent.llm import OptionalLLMClient
 from app.agent.memory import conversation_memory
 from app.agent.prompts import TEXT_RESPONSE_SYSTEM_PROMPT, build_text_response_user_prompt
-from app.agent.runtime import build_agent_plan, build_context_snapshot, normalize_history, validate_decision
+from app.agent.runtime import build_agent_plan, build_context_snapshot, detect_conversation_intent, normalize_history, validate_decision
 from app.agent.tools import ShopcareTools, detect_intent, extract_order_id
 from app.config import get_settings
 from app.schemas import ChatResponse, ToolTrace
@@ -42,6 +42,16 @@ class ShopCareAgent:
             label="上下文管理",
             summary=f"历史 {len(history)} 条，订单 {resolved_order_id or '待补充'}",
         )
+
+        conversation_intent = detect_conversation_intent(message)
+        if conversation_intent and not image_bytes:
+            return self._conversation_reply(
+                message=message,
+                intent=conversation_intent,
+                tools=tools,
+                session_id=session_id,
+                history=history,
+            )
 
         image_analysis: dict[str, Any] | None = None
         image_llm_used = False
@@ -127,6 +137,55 @@ class ShopCareAgent:
             image_analysis=image_analysis,
         )
 
+    def _conversation_reply(
+        self,
+        *,
+        message: str,
+        intent: str,
+        tools: ShopcareTools,
+        session_id: str | None,
+        history: list[dict[str, str]],
+    ) -> ChatResponse:
+        answers = {
+            "identity": "我是安心购的智能售后助手，你可以把我当成一个一直在线的售后搭子。退款、退货、换货、物流异常、商品破损这些事，我都能先帮你看一遍：能自动处理的我直接给方案，需要补凭证的我会告诉你该传什么，不让你来回猜。",
+            "greeting": "我在呢。你把订单号和遇到的问题发我就行；如果商品有破损，也可以直接传照片，我会结合订单和售后规则一起帮你判断。",
+            "thanks": "不客气，这事我继续帮你盯着。后面你只要补一句“我要退款”或者“我想换货”，我会接着前面的订单继续处理。",
+            "help": "你可以这样用：先发订单号和问题，比如“3000029 包装破损想退款”；如果有照片就一起上传。之后你可以直接追问“那能换货吗”“要不要人工”，我会记住前面的上下文继续回答。",
+            "smalltalk": "我在。你可以直接说遇到的售后问题，我会按当前订单和前面的聊天继续帮你判断。",
+        }
+        answer = answers.get(intent, answers["smalltalk"])
+        tools.record_trace(
+            "ConversationRouter",
+            {"message": message, "history_turns": len(history)},
+            {"intent": intent, "answer": answer},
+            label="轻对话路由",
+            summary=f"识别为 {intent}",
+        )
+        conversation_memory.append(session_id, role="user", content=message)
+        conversation_memory.append(session_id, role="assistant", content=answer)
+        return ChatResponse(
+            answer=answer,
+            intent=intent,
+            decision={
+                "status": "informational",
+                "resolution": "conversation",
+                "priority": "P3",
+                "need_human_review": False,
+                "refund_amount": 0,
+                "compensation_amount": 0,
+                "reason": "用户当前是在进行轻对话，不需要进入售后决策流程。",
+                "next_steps": ["继续描述售后问题，或上传商品凭证"],
+            },
+            order=None,
+            user_profile=None,
+            similar_cases=[],
+            policy_evidence=[],
+            traces=tools.traces,
+            llm_used=False,
+            llm_provider=None,
+            image_analysis=None,
+        )
+
     async def _analyze_image(
         self,
         *,
@@ -182,15 +241,14 @@ class ShopCareAgent:
         image_analysis: dict[str, Any] | None,
     ) -> str:
         if not order:
-            return "我需要先确认订单号，才能判断是否支持退款、退货、换货或补发。请提供订单号，并简单描述商品问题。"
+            return "我先帮你接住这个问题，不过现在还缺订单号。你把订单号发我一下，我就能看订单状态，再判断是退款、退货、换货还是补发更合适。"
 
         lines = [
-            f"您好，订单 {order.get('order_id')} 当前状态为 {order.get('order_status')}，商品为 {order.get('product_name')}，类目为 {order.get('category')}，金额 {order.get('amount')} 元。"
+            f"我先帮你看了这单：{order.get('order_id')}，商品是 {order.get('product_name')}，现在状态是 {order.get('order_status')}。"
         ]
         if user:
-            lines.append(
-                f"您的用户等级为 {user.get('user_tier')}，历史购买 {user.get('total_purchase_times')} 次，累计消费 {user.get('total_purchase_amount')} 元。"
-            )
+            if user.get("user_tier") in {"VIP", "HighValue"}:
+                lines.append("你是平台的高价值用户，这类售后我会优先按更稳妥的方式处理。")
         if image_analysis:
             details = "、".join(image_analysis.get("damage_details") or [])
             valid_text = "有效" if image_analysis.get("evidence_valid") else "暂不充分"
@@ -199,16 +257,16 @@ class ShopCareAgent:
                 f"损坏详情：{details or '未识别到明确损坏点'}；凭证判断：{valid_text}。"
             )
         lines.append(
-            f"建议处理方案：{decision.get('resolution')}，当前判断为 {decision.get('status')}。原因：{decision.get('reason')}"
+            f"这单我建议走 {decision.get('resolution')}。当前判断是 {decision.get('status')}，主要原因是：{decision.get('reason')}"
         )
         next_steps = "；".join(decision.get("next_steps") or [])
         if next_steps:
-            lines.append(f"下一步：{next_steps}。")
+            lines.append(f"你接下来先做这一步就好：{next_steps}。")
         if policy_hits:
             lines.append(f"处理依据：{policy_hits[0].get('title')}。")
         if similar_cases:
             lines.append(f"系统检索到 {len(similar_cases)} 条相似售后案例，常见处理方式包括 {similar_cases[0].get('resolution')}。")
-        lines.append("该问题建议转人工复核。" if decision.get("need_human_review") else "暂不需要人工介入，可按流程继续处理。")
+        lines.append("这类情况我建议让人工再复核一下，避免你后面来回补材料。" if decision.get("need_human_review") else "目前看不需要先转人工，我可以继续帮你往下办。")
         return "\n".join(lines).strip()
 
 
