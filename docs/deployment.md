@@ -78,7 +78,7 @@ https://你的后端域名.onrender.com/health
 
 ## Vercel 后端部署方案
 
-如果 Render 要求绑卡，可以直接用 Vercel 部署后端。Vercel 官方支持 FastAPI，`backend/index.py` 已经导出 FastAPI app。
+如果 Render 要求绑卡，可以直接用 Vercel 部署后端。Vercel 官方支持 FastAPI，`backend/api/index.py` 已经导出 FastAPI app。
 
 在 Vercel 新建第二个 Project：
 
