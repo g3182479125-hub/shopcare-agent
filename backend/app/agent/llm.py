@@ -17,7 +17,10 @@ class OptionalLLMClient:
         if self._client is None:
             from openai import OpenAI
 
-            kwargs: dict[str, Any] = {"api_key": self.settings.llm_api_key}
+            kwargs: dict[str, Any] = {
+                "api_key": self.settings.llm_api_key,
+                "timeout": self.settings.llm_timeout_seconds,
+            }
             if self.settings.llm_base_url:
                 kwargs["base_url"] = self.settings.llm_base_url
             self._client = OpenAI(**kwargs)
@@ -31,6 +34,7 @@ class OptionalLLMClient:
             response = client.chat.completions.create(
                 model=self.settings.llm_model,
                 temperature=self.settings.llm_temperature,
+                max_tokens=650,
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},

@@ -15,6 +15,7 @@ class KimiVisionAgent:
         self.api_key = settings.kimi_api_key
         self.base_url = settings.kimi_base_url.rstrip("/")
         self.model = settings.kimi_model
+        self.timeout_seconds = settings.kimi_timeout_seconds
 
     async def analyze_image(
         self,
@@ -43,11 +44,11 @@ class KimiVisionAgent:
             )
 
         system_prompt = """你是电商售后图片分析专家。
-用户会上传商品问题图片，请详细分析并返回严格的 JSON 格式。
+用户会上传商品问题图片，请快速判断图片是否能作为售后凭证，并返回严格 JSON。
 不要输出任何 JSON 以外的内容，不要加 markdown 代码块。
 JSON 格式如下：
 {
-  "product_condition": "商品外观状态的详细描述",
+  "product_condition": "商品外观状态的简洁描述",
   "damage_details": ["损坏点1", "损坏点2"],
   "severity": "轻微|中等|严重",
   "evidence_valid": true,
@@ -62,12 +63,12 @@ JSON 格式如下：
             },
             {
                 "type": "text",
-                "text": f"请分析这张商品图片的问题，并判断它能否作为售后凭证。{context_str}",
+                "text": f"请分析这张商品问题图片，判断它能否作为售后凭证。{context_str}",
             },
         ]
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
                 response = await client.post(
                     f"{self.base_url}/chat/completions",
                     headers={
@@ -80,7 +81,7 @@ JSON 格式如下：
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_content},
                         ],
-                        "max_tokens": 500,
+                        "max_tokens": 360,
                     },
                 )
                 response.raise_for_status()

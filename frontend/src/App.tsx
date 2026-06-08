@@ -1,6 +1,20 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent, type ClipboardEvent, type ReactNode } from 'react'
-import { Activity, Bot, Camera, CheckCircle2, Database, FileSearch, GitBranch, Loader2, Search, ShieldAlert, TicketCheck, UserRound, X } from 'lucide-react'
-import { getSummary, postChat } from './api'
+import { useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type DragEvent } from 'react'
+import {
+  Bot,
+  Camera,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardCheck,
+  ImagePlus,
+  Loader2,
+  PackageCheck,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  X
+} from 'lucide-react'
+import { postChat } from './api'
 
 type ImageAnalysis = {
   product_condition: string
@@ -11,6 +25,16 @@ type ImageAnalysis = {
   suggested_action?: string
 }
 
+type Trace = {
+  tool_name: string
+  label?: string
+  input: unknown
+  output: unknown
+  status: string
+  elapsed_ms: number
+  summary?: string
+}
+
 type ChatResult = {
   answer: string
   intent: string
@@ -19,7 +43,7 @@ type ChatResult = {
   user_profile?: Record<string, any>
   similar_cases: Record<string, any>[]
   policy_evidence: Record<string, any>[]
-  traces: { tool_name: string; label?: string; input: any; output: any; status: string; elapsed_ms: number; summary?: string }[]
+  traces: Trace[]
   llm_used: boolean
   image_analysis?: ImageAnalysis | null
 }
@@ -33,73 +57,101 @@ const examples = [
   { orderId: '3000025', text: '手机坏了，我是老用户，能不能换货或者退货？' }
 ]
 
-function fmt(value: any) {
+const statusMap: Record<string, string> = {
+  approved: '已通过',
+  rejected: '暂不通过',
+  need_info: '需补充资料',
+  escalated: '人工复核'
+}
+
+const resolutionMap: Record<string, string> = {
+  refund_only: '仅退款',
+  return_refund: '退货退款',
+  exchange: '换货',
+  manual_review: '人工复核',
+  reject: '拒绝售后',
+  replacement: '补发/换新'
+}
+
+function display(value: unknown) {
   if (value === null || value === undefined || value === '') return '-'
   return String(value)
 }
 
-function compactNumber(value: any) {
-  const num = Number(value || 0)
-  if (num >= 10000) return `${(num / 10000).toFixed(1)}万`
-  return num.toLocaleString('zh-CN')
+function money(value: unknown) {
+  const num = Number(value)
+  if (!Number.isFinite(num)) return display(value)
+  return `¥${num.toFixed(2)}`
 }
 
-function formatFileSize(size: number) {
-  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)}MB`
-  return `${Math.max(1, Math.round(size / 1024))}KB`
+function cleanText(text = '') {
+  return text.replace(/\*\*/g, '').trim()
+}
+
+function fileSize(size: number) {
+  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`
+  return `${Math.max(1, Math.round(size / 1024))} KB`
 }
 
 export default function App() {
-  const [message, setMessage] = useState(examples[0].text)
-  const [orderId, setOrderId] = useState(examples[0].orderId)
+  const [orderId, setOrderId] = useState(examples[2].orderId)
+  const [message, setMessage] = useState(examples[2].text)
   const [result, setResult] = useState<ChatResult | null>(null)
-  const [summary, setSummary] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState('')
   const [uploadedImage, setUploadedImage] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState('')
   const [dragActive, setDragActive] = useState(false)
-  const [progressText, setProgressText] = useState('')
+  const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  useEffect(() => {
-    getSummary().then(setSummary).catch(() => setSummary(null))
-  }, [])
+  const decision = result?.decision || {}
+  const statusKey = String(decision.status || '')
+  const decisionTone = statusKey === 'approved' ? 'success' : statusKey === 'rejected' ? 'danger' : 'attention'
+  const answerParagraphs = useMemo(() => cleanText(result?.answer || '').split(/\n+/).filter(Boolean), [result])
 
-  useEffect(() => {
-    if (!uploadedImage) {
-      setPreviewUrl(null)
-      return
-    }
-    const url = URL.createObjectURL(uploadedImage)
-    setPreviewUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [uploadedImage])
-
-  const decisionTone = useMemo(() => {
-    const status = result?.decision?.status
-    if (status === 'approved') return 'approved'
-    if (status === 'escalated') return 'escalated'
-    return 'pending'
-  }, [result])
-
-  function acceptImage(file: File | null | undefined) {
-    if (!file) return
-    if (!file.type.startsWith('image/')) return
-    if (file.size > MAX_IMAGE_SIZE) {
-      window.alert('图片不能超过5MB')
-      return
-    }
-    setUploadedImage(file)
+  function setExample(item: (typeof examples)[number]) {
+    setOrderId(item.orderId)
+    setMessage(item.text)
+    setResult(null)
+    setError('')
   }
 
-  function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+  function acceptImage(file?: File | null) {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setError('请上传图片格式的凭证。')
+      return
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError('图片不能超过 5 MB。')
+      return
+    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setUploadedImage(file)
+    setPreviewUrl(URL.createObjectURL(file))
+    setError('')
+  }
+
+  function removeImage() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setUploadedImage(null)
+    setPreviewUrl('')
+  }
+
+  function onFileChange(event: ChangeEvent<HTMLInputElement>) {
+    acceptImage(event.target.files?.[0])
+    event.target.value = ''
+  }
+
+  function onPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
     const imageItem = Array.from(event.clipboardData.items).find((item) => item.type.startsWith('image/'))
     if (!imageItem) return
     event.preventDefault()
     acceptImage(imageItem.getAsFile())
   }
 
-  function handleDrop(event: DragEvent<HTMLTextAreaElement>) {
+  function onDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault()
     setDragActive(false)
     const file = Array.from(event.dataTransfer.files).find((item) => item.type.startsWith('image/'))
@@ -107,227 +159,263 @@ export default function App() {
   }
 
   async function submit() {
-    setLoading(true)
-    setProgressText(uploadedImage ? '图片上传中...' : '')
-    const timers: number[] = []
-    if (uploadedImage) {
-      timers.push(window.setTimeout(() => setProgressText('Kimi视觉Agent分析图片...'), 500))
-      timers.push(window.setTimeout(() => setProgressText('DeepSeek综合决策中...'), 1400))
+    const trimmedMessage = message.trim()
+    const trimmedOrderId = orderId.trim()
+    if (!trimmedMessage || !trimmedOrderId) {
+      setError('请填写订单号和售后问题。')
+      return
     }
+
+    setLoading(true)
+    setError('')
+    setProgress(uploadedImage ? '正在识别图片凭证' : '正在核验订单')
+    const timers = [
+      window.setTimeout(() => setProgress('正在匹配售后政策'), 650),
+      window.setTimeout(() => setProgress('正在生成处理建议'), 1300)
+    ]
+
     try {
-      const data = await postChat(message, orderId, uploadedImage)
+      const data = await postChat(trimmedMessage, trimmedOrderId, uploadedImage)
       setResult(data)
-      if (uploadedImage) setProgressText('完成')
+      setProgress('已生成处理结果')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '服务暂时不可用，请稍后重试。')
     } finally {
       timers.forEach(window.clearTimeout)
+      window.setTimeout(() => setProgress(''), 900)
       setLoading(false)
-      if (uploadedImage) window.setTimeout(() => setProgressText(''), 1200)
     }
-  }
-
-  function useExample(item: { orderId: string; text: string }) {
-    setOrderId(item.orderId)
-    setMessage(item.text)
   }
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
-        <div className="brand-row">
-          <div className="brand-mark"><Bot size={22} /></div>
+    <main className="page">
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-icon">
+            <Bot size={24} />
+          </div>
           <div>
-            <h1>ShopCare Agent</h1>
-            <p>电商售后智能决策台</p>
+            <strong>ShopCare Agent</strong>
+            <span>电商售后智能助手</span>
           </div>
         </div>
+        <div className="topbar-chips">
+          <span><ShieldCheck size={15} /> 订单核验</span>
+          <span><Camera size={15} /> 图片凭证</span>
+          <span><Sparkles size={15} /> AI 决策</span>
+        </div>
+      </header>
 
-        <section className="metric-grid">
-          <Metric icon={<Database size={18} />} label="订单" value={compactNumber(summary?.orders?.count)} />
-          <Metric icon={<UserRound size={18} />} label="用户" value={compactNumber(summary?.users?.count)} />
-          <Metric icon={<TicketCheck size={18} />} label="售后" value={compactNumber(summary?.aftersales?.count)} />
-          <Metric icon={<Activity size={18} />} label="退款额" value={compactNumber(summary?.aftersales?.refund_sum)} />
-        </section>
+      <section className="hero">
+        <div>
+          <p className="eyebrow">Customer After-Sales Assistant</p>
+          <h1>提交售后问题，马上得到处理建议</h1>
+          <p className="hero-copy">
+            系统会结合订单、用户等级、售后政策、历史案例和商品图片凭证，输出可解释的退款、退货、换货或人工复核建议。
+          </p>
+        </div>
+        <div className="hero-status">
+          <PackageCheck size={18} />
+          <span>当前接入公开演示数据，可直接在线体验</span>
+        </div>
+      </section>
 
-        <section className="side-section">
-          <h2>样例问题</h2>
-          <div className="example-list">
+      <section className="assistant-grid">
+        <section className="request-panel">
+          <div className="section-title">
+            <ClipboardCheck size={20} />
+            <div>
+              <h2>申请售后</h2>
+              <p>填写订单号、描述问题，并上传商品照片作为凭证。</p>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <label>
+              订单号
+              <input value={orderId} onChange={(event) => setOrderId(event.target.value)} placeholder="例如 3000029" />
+            </label>
+          </div>
+
+          <label className="problem-box">
+            售后问题
+            <textarea
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              onPaste={onPaste}
+              placeholder="例如：食品包装破损了，能不能仅退款？"
+              rows={5}
+            />
+          </label>
+
+          <div
+            className={`upload-zone ${dragActive ? 'dragging' : ''}`}
+            onDragOver={(event) => {
+              event.preventDefault()
+              setDragActive(true)
+            }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={onDrop}
+          >
+            <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onFileChange} />
+            {previewUrl && uploadedImage ? (
+              <div className="image-preview">
+                <img src={previewUrl} alt="售后凭证预览" />
+                <div>
+                  <strong>{uploadedImage.name}</strong>
+                  <span>{fileSize(uploadedImage.size)}</span>
+                </div>
+                <button type="button" onClick={removeImage} aria-label="移除图片">
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <button type="button" className="upload-empty" onClick={() => fileInputRef.current?.click()}>
+                <ImagePlus size={20} />
+                <span>上传或拖入商品问题图片</span>
+              </button>
+            )}
+          </div>
+
+          <div className="example-row">
             {examples.map((item) => (
-              <button key={item.orderId} onClick={() => useExample(item)}>
-                <span>{item.orderId}</span>
-                {item.text}
+              <button key={item.orderId} type="button" onClick={() => setExample(item)}>
+                {item.orderId}
               </button>
             ))}
           </div>
+
+          {error && <p className="error-text">{error}</p>}
+
+          <button className="submit-button" type="button" onClick={submit} disabled={loading}>
+            {loading ? <Loader2 className="spin" size={19} /> : <Search size={19} />}
+            {loading ? progress || '正在分析' : '开始分析'}
+          </button>
         </section>
 
-        <section className="side-section">
-          <h2>售后原因 Top</h2>
-          <div className="rank-list">
-            {(summary?.aftersales?.reason_top || []).slice(0, 6).map((item: any) => (
-              <div className="rank-row" key={item.name}>
-                <span>{item.name}</span>
-                <b>{compactNumber(item.value)}</b>
-              </div>
-            ))}
+        <aside className={`result-panel ${result ? decisionTone : ''}`}>
+          <div className="section-title">
+            {decisionTone === 'success' ? <CheckCircle2 size={20} /> : <RotateCcw size={20} />}
+            <div>
+              <h2>处理结果</h2>
+              <p>{result ? '已生成可解释的售后建议。' : '提交后会在这里展示结论。'}</p>
+            </div>
           </div>
-        </section>
-      </aside>
 
-      <section className="workspace">
-        <div className="query-panel">
-          <div className="query-fields">
-            <label>
-              订单号
-              <input value={orderId} onChange={(event) => setOrderId(event.target.value)} placeholder="如 3000010" />
-            </label>
-            <label className="message-field">
-              售后问题
-              {progressText && <div className="progress-banner">{progressText}</div>}
-              <textarea
-                className={dragActive ? 'drag-active' : ''}
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                onPaste={handlePaste}
-                onDragOver={(event) => {
-                  event.preventDefault()
-                  setDragActive(true)
-                }}
-                onDragLeave={() => setDragActive(false)}
-                onDrop={handleDrop}
-                rows={3}
-                placeholder="可输入文字，也可以粘贴或拖拽商品问题图片"
-              />
-              {uploadedImage && previewUrl && (
-                <div className="image-preview">
-                  <div className="image-thumb-wrap">
-                    <img src={previewUrl} alt="售后凭证预览" />
-                    <button type="button" aria-label="清除图片" onClick={() => setUploadedImage(null)}>
-                      <X size={14} />
-                    </button>
-                  </div>
-                  <div>
-                    <b>{uploadedImage.name}</b>
-                    <p>{formatFileSize(uploadedImage.size)}</p>
-                  </div>
-                </div>
-              )}
-            </label>
+          <div className="decision-summary">
+            <SummaryItem label="状态" value={statusMap[statusKey] || display(decision.status)} />
+            <SummaryItem label="方案" value={resolutionMap[String(decision.resolution)] || display(decision.resolution)} />
+            <SummaryItem label="优先级" value={display(decision.priority)} />
+            <SummaryItem label="退款金额" value={decision.refund_amount === undefined ? '-' : money(decision.refund_amount)} />
           </div>
-          <div className="query-actions">
-            <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(event) => acceptImage(event.target.files?.[0])} />
-            <button className="secondary-button" type="button" onClick={() => fileInputRef.current?.click()} disabled={loading}>
-              <Camera size={18} />
-              上传图片
-            </button>
-            <button className="primary-button" onClick={submit} disabled={loading}>
-              {loading ? <Loader2 className="spin" size={18} /> : <Search size={18} />}
-              开始分析
-            </button>
+
+          {result?.image_analysis && <ImageCard analysis={result.image_analysis} />}
+        </aside>
+      </section>
+
+      <section className="answer-section">
+        <div className="section-title">
+          <Bot size={20} />
+          <div>
+            <h2>Agent 答复</h2>
+            <p>{result?.llm_used ? '由大模型综合生成。' : '由规则引擎快速兜底生成。'}</p>
           </div>
         </div>
+        {answerParagraphs.length ? (
+          <div className="answer-body">
+            {answerParagraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+          </div>
+        ) : (
+          <div className="empty-answer">这里会展示给用户看的售后答复。</div>
+        )}
+      </section>
 
-        <div className="content-grid">
-          <section className="main-panel answer-panel">
-            <div className="panel-title">
-              <Bot size={20} />
-              <h2>Agent 答复</h2>
-              {result && <span className="pill">{result.llm_used ? 'LLM' : '规则兜底'}</span>}
-            </div>
-            {result?.image_analysis && <ImageAnalysisCard analysis={result.image_analysis} />}
-            <pre className="answer-text">{result?.answer || '输入订单号和售后问题后，系统会查询订单、用户、相似案例和政策，并输出处理建议。支持粘贴、拖拽或上传商品问题图片作为售后凭证。'}</pre>
-          </section>
-
-          <section className={`decision-panel ${decisionTone}`}>
-            <div className="panel-title">
-              {decisionTone === 'approved' ? <CheckCircle2 size={20} /> : <ShieldAlert size={20} />}
-              <h2>决策结果</h2>
-            </div>
-            <div className="decision-grid">
-              <Info label="状态" value={result?.decision?.status} />
-              <Info label="方案" value={result?.decision?.resolution} />
-              <Info label="优先级" value={result?.decision?.priority} />
-              <Info label="退款" value={result?.decision?.refund_amount} />
-              <Info label="补偿" value={result?.decision?.compensation_amount} />
-              <Info label="人工" value={result?.decision?.need_human_review ? '需要' : '否'} />
-            </div>
-          </section>
-
-          <section className="main-panel">
-            <div className="panel-title"><Database size={20} /><h2>订单画像</h2></div>
-            <div className="info-grid">
-              <Info label="订单" value={result?.order?.order_id} />
-              <Info label="状态" value={result?.order?.order_status} />
-              <Info label="商品" value={result?.order?.product_name} />
-              <Info label="类目" value={result?.order?.category} />
-              <Info label="金额" value={result?.order?.amount} />
-              <Info label="履约小时" value={result?.order?.fulfillment_time} />
-              <Info label="用户等级" value={result?.user_profile?.user_tier} />
-              <Info label="累计消费" value={result?.user_profile?.total_purchase_amount} />
-            </div>
-          </section>
-
-          <section className="main-panel">
-            <div className="panel-title"><GitBranch size={20} /><h2>工具调用轨迹</h2></div>
-            <div className="trace-list">
-              {(result?.traces || []).map((trace, index) => (
-                <div className="trace-row" key={`${trace.tool_name}-${index}`}>
-                  <span className="trace-index">{index + 1}</span>
-                  <div>
-                    <b>{trace.label || trace.tool_name}</b>
-                    <p>{trace.status} · {trace.elapsed_ms} ms{trace.summary ? ` · ${trace.summary}` : ''}</p>
+      {result && (
+        <section className="details-section">
+          <details>
+            <summary>查看订单画像与 Agent 调用轨迹 <ChevronDown size={17} /></summary>
+            <div className="detail-grid">
+              <div className="detail-card">
+                <h3>订单画像</h3>
+                <Info label="订单" value={result.order?.order_id} />
+                <Info label="状态" value={result.order?.order_status} />
+                <Info label="商品" value={result.order?.product_name} />
+                <Info label="类目" value={result.order?.category} />
+                <Info label="金额" value={money(result.order?.amount)} />
+                <Info label="用户等级" value={result.user_profile?.user_tier} />
+              </div>
+              <div className="detail-card">
+                <h3>调用轨迹</h3>
+                {(result.traces || []).map((trace, index) => (
+                  <div className="trace" key={`${trace.tool_name}-${index}`}>
+                    <b>{index + 1}. {trace.label || trace.tool_name}</b>
+                    <span>{trace.status} · {trace.elapsed_ms} ms{trace.summary ? ` · ${trace.summary}` : ''}</span>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </section>
+          </details>
 
-          <section className="main-panel wide-panel">
-            <div className="panel-title"><FileSearch size={20} /><h2>政策与相似案例</h2></div>
+          <details>
+            <summary>查看政策依据与相似案例 <ChevronDown size={17} /></summary>
             <div className="evidence-grid">
-              <div>
+              <div className="detail-card">
                 <h3>政策依据</h3>
-                {(result?.policy_evidence || []).map((item) => (
-                  <article className="evidence-item" key={item.title}>
+                {(result.policy_evidence || []).map((item, index) => (
+                  <article key={`${item.title}-${index}`}>
                     <b>{item.title}</b>
                     <p>{item.content}</p>
                   </article>
                 ))}
               </div>
-              <div>
+              <div className="detail-card">
                 <h3>相似案例</h3>
-                {(result?.similar_cases || []).slice(0, 4).map((item) => (
-                  <article className="evidence-item" key={item.case_id}>
-                    <b>{item.case_id} · {item.reason_code}</b>
-                    <p>{item.user_description}，处理：{item.resolution}</p>
+                {(result.similar_cases || []).slice(0, 4).map((item, index) => (
+                  <article key={`${item.case_id}-${index}`}>
+                    <b>{item.case_id || '案例'} · {item.reason_code || '售后'}</b>
+                    <p>{item.user_description || item.description || '-'}，处理：{item.resolution || '-'}</p>
                   </article>
                 ))}
               </div>
             </div>
-          </section>
-        </div>
-      </section>
+          </details>
+        </section>
+      )}
     </main>
   )
 }
 
-function ImageAnalysisCard({ analysis }: { analysis: ImageAnalysis }) {
-  const severityClass = analysis.severity === '严重' ? 'severe' : analysis.severity === '中等' ? 'medium' : 'light'
+function SummaryItem({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="image-analysis-card">
-      <div className="analysis-title"><Camera size={16} /> 图片分析结果（Kimi视觉Agent）</div>
-      <div>商品状态：{analysis.product_condition}</div>
-      <div>损坏详情：{(analysis.damage_details || []).join('、') || '-'}</div>
-      <div>严重程度：<span className={`severity-tag ${severityClass}`}>{analysis.severity || '-'}</span></div>
-      <div>凭证有效：{analysis.evidence_valid ? '是' : '否'}</div>
-      {analysis.evidence_description && <div>凭证说明：{analysis.evidence_description}</div>}
+    <div>
+      <span>{label}</span>
+      <strong>{display(value)}</strong>
     </div>
   )
 }
 
-function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return <div className="metric"><span>{icon}</span><p>{label}</p><b>{value || '-'}</b></div>
+function Info({ label, value }: { label: string; value: unknown }) {
+  return (
+    <div className="info-line">
+      <span>{label}</span>
+      <strong>{display(value)}</strong>
+    </div>
+  )
 }
 
-function Info({ label, value }: { label: string; value: any }) {
-  return <div className="info-item"><span>{label}</span><b>{fmt(value)}</b></div>
+function ImageCard({ analysis }: { analysis: ImageAnalysis }) {
+  return (
+    <div className="image-card">
+      <div className="image-card-title">
+        <Camera size={16} />
+        图片凭证分析
+      </div>
+      <p>{analysis.product_condition}</p>
+      <div className="image-tags">
+        <span>{analysis.severity || '中等'}</span>
+        <span>{analysis.evidence_valid ? '凭证有效' : '需补充图片'}</span>
+      </div>
+      {analysis.damage_details?.length > 0 && <small>{analysis.damage_details.join('、')}</small>}
+    </div>
+  )
 }
