@@ -5,6 +5,7 @@ from typing import Any
 
 from app.agent.kimi_vision_agent import KimiVisionAgent
 from app.agent.llm import OptionalLLMClient
+from app.agent.memory import conversation_memory
 from app.agent.tools import ShopcareTools, detect_intent, extract_order_id
 from app.config import get_settings
 from app.schemas import ChatResponse, ToolTrace
@@ -27,7 +28,9 @@ class ShopCareAgent:
         session_id: str | None = None,
     ) -> ChatResponse:
         tools = ShopcareTools(self.repository)
-        resolved_order_id = order_id or extract_order_id(message)
+        history = conversation_memory.get(session_id)
+        history_text = _format_history(history)
+        resolved_order_id = order_id or extract_order_id(message) or extract_order_id(history_text)
         image_analysis: dict[str, Any] | None = None
         image_llm_used = False
 
@@ -46,7 +49,7 @@ class ShopCareAgent:
         order = tools.query_order(resolved_order_id) if resolved_order_id else None
         user = tools.query_user(order["user_id"]) if order and order.get("user_id") else None
         category = order.get("category") if order else None
-        policy_query = " ".join([message, intent, category or ""])
+        policy_query = " ".join([message, history_text, intent, category or ""])
         policy_hits = tools.search_policy(policy_query)
         similar_cases = tools.search_cases(query=message, category=category) if order else tools.search_cases(query=message, category=None)
         decision = tools.decide(message=message, intent=intent, order=order, user=user, policy_hits=policy_hits)
@@ -81,12 +84,17 @@ class ShopCareAgent:
                 decision=decision,
                 image_analysis=image_analysis,
                 session_id=session_id,
+                conversation_history=history,
             )
             if llm_answer:
                 llm_provider = self.settings.llm_provider or "deepseek"
 
+        final_answer = llm_answer or fallback_answer
+        conversation_memory.append(session_id, role="user", content=message)
+        conversation_memory.append(session_id, role="assistant", content=final_answer)
+
         return ChatResponse(
-            answer=llm_answer or fallback_answer,
+            answer=final_answer,
             intent=intent,
             decision=decision,
             order=order,
@@ -185,6 +193,14 @@ class ShopCareAgent:
             lines.append(f"系统检索到 {len(similar_cases)} 条相似售后案例，常见处理方式包括 {similar_cases[0].get('resolution')}。")
         lines.append("该问题建议转人工复核。" if decision.get("need_human_review") else "暂不需要人工介入，可按流程继续处理。")
         return "\n".join(lines).strip()
+
+
+def _format_history(history: list[dict[str, str]]) -> str:
+    if not history:
+        return ""
+    recent = history[-8:]
+    lines = [f"{item.get('role', 'unknown')}: {item.get('content', '')}" for item in recent]
+    return "\n".join(lines)
 
 
 def _format_image_context(analysis: dict[str, Any]) -> str:
