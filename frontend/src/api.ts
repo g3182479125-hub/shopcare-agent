@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? 'https://shopcare-agent-api.vercel.app' : 'http://localhost:8000')
 
 type DemoOrder = Record<string, any>
 type DemoUser = Record<string, any>
