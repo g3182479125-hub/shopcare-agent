@@ -82,7 +82,7 @@ http://localhost:5173
 
 具体步骤见 `docs/deployment.md`。推荐：
 
-- 后端：Render Web Service
+- 后端：Render Web Service 或 Vercel FastAPI 后端
 - 前端：Vercel
 - 线上 demo 数据：`backend/app/data/demo_seed.json` 自动初始化
 

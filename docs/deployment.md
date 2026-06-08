@@ -75,3 +75,41 @@ https://你的后端域名.onrender.com/health
 - 前端能打开并显示订单、用户、售后 KPI。
 - 输入订单号 `3000012` 和售后问题，页面能显示 Agent 答复、决策结果、工具调用轨迹。
 - 后端返回里的 `llm_used` 为 `true`，说明 API 已经参与回答生成。
+
+## Vercel 后端部署方案
+
+如果 Render 要求绑卡，可以直接用 Vercel 部署后端。Vercel 官方支持 FastAPI，`backend/index.py` 已经导出 FastAPI app。
+
+在 Vercel 新建第二个 Project：
+
+1. Import 同一个 GitHub 仓库：`g3182479125-hub/shopcare-agent`
+2. Project Name 填：`shopcare-agent-api`
+3. Root Directory 选择：`backend`
+4. Framework Preset 选择：`Other` 或保持自动识别
+5. Build Command 留空
+6. Install Command：`pip install -r requirements.txt`
+7. 环境变量：
+
+```env
+APP_ENV=production
+SHOPCARE_DB_PATH=/tmp/shopcare.db
+LLM_PROVIDER=deepseek
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-chat
+LLM_API_KEY=你的 DeepSeek API Key
+ALLOW_ORIGINS=https://shopcare-agent.vercel.app
+```
+
+部署成功后，后端健康检查地址类似：
+
+```text
+https://shopcare-agent-api.vercel.app/health
+```
+
+然后回到前端 Vercel 项目，把环境变量改为：
+
+```env
+VITE_API_BASE_URL=https://shopcare-agent-api.vercel.app
+```
+
+重新部署前端后，公网前端就会调用 Vercel FastAPI 后端。
