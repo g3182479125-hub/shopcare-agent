@@ -10,12 +10,12 @@ from app.services.repository import ShopcareRepository
 
 
 INTENT_KEYWORDS = {
-    "refund": ["退款", "退钱", "取消", "不想要", "没发货", "未发货"],
+    "refund": ["退款", "退钱", "取消", "不想要", "没发货", "未发货", "仅退款"],
     "return_refund": ["退货", "退掉", "七天无理由", "不合适", "不满意"],
-    "exchange": ["换货", "换码", "尺码", "型号不对", "颜色不对"],
+    "exchange": ["换货", "换码", "尺码", "型号不对", "颜色不对", "换新"],
     "reship": ["少发", "漏发", "缺失", "配件", "赠品", "补发"],
     "logistics": ["物流", "快递", "没收到", "签收", "配送", "超时"],
-    "quality": ["坏", "故障", "破损", "质量", "不能用", "漏液", "不新鲜", "过敏", "异常"],
+    "quality": ["坏", "故障", "破损", "质量", "不能用", "漏液", "不新鲜", "过敏", "异常", "损坏"],
     "invoice": ["发票", "抬头", "税号"],
     "complaint": ["投诉", "人工", "客服", "赔偿", "补偿"],
 }
@@ -29,7 +29,7 @@ def detect_intent(message: str) -> str:
 
 
 def extract_order_id(message: str) -> str | None:
-    match = re.search(r"\b(\d{7,})\b", message)
+    match = re.search(r"\b(\d{7,})\b", message or "")
     return match.group(1) if match else None
 
 
@@ -39,7 +39,10 @@ class ShopcareTools:
         self.policy_rag = policy_rag or PolicyRAG()
         self.traces: list[ToolTrace] = []
 
-    def call(self, name: str, payload: dict[str, Any], func: Callable[[], Any]) -> Any:
+    def record_trace(self, name: str, payload: dict[str, Any], output: Any, *, label: str | None = None, summary: str | None = None, status: str = "ok", elapsed_ms: int = 0) -> None:
+        self.traces.append(ToolTrace(tool_name=name, label=label, input=payload, output=output, status=status, elapsed_ms=elapsed_ms, summary=summary))
+
+    def call(self, name: str, payload: dict[str, Any], func: Callable[[], Any], *, label: str | None = None, summary: str | None = None) -> Any:
         start = time.perf_counter()
         status = "ok"
         try:
@@ -48,30 +51,32 @@ class ShopcareTools:
             status = "error"
             output = {"error": str(exc)}
         elapsed_ms = int((time.perf_counter() - start) * 1000)
-        self.traces.append(ToolTrace(tool_name=name, input=payload, output=output, status=status, elapsed_ms=elapsed_ms))
+        self.traces.append(ToolTrace(tool_name=name, label=label, input=payload, output=output, status=status, elapsed_ms=elapsed_ms, summary=summary))
         return output
 
     def query_order(self, order_id: str) -> dict[str, Any] | None:
-        return self.call("OrderTool", {"order_id": order_id}, lambda: self.repository.get_order(order_id))
+        return self.call("OrderTool", {"order_id": order_id}, lambda: self.repository.get_order(order_id), label="订单查询")
 
     def query_user(self, user_id: str) -> dict[str, Any] | None:
-        return self.call("UserTool", {"user_id": user_id}, lambda: self.repository.get_user(user_id))
+        return self.call("UserTool", {"user_id": user_id}, lambda: self.repository.get_user(user_id), label="用户画像")
 
     def search_cases(self, *, query: str, category: str | None, reason_code: str | None = None) -> list[dict[str, Any]]:
         return self.call(
             "CaseTool",
             {"query": query, "category": category, "reason_code": reason_code},
             lambda: self.repository.search_cases(query=query, category=category, reason_code=reason_code, limit=6),
+            label="相似案例检索",
         )
 
     def search_policy(self, query: str) -> list[dict[str, Any]]:
-        return self.call("PolicyRAGTool", {"query": query}, lambda: self.policy_rag.search(query))
+        return self.call("PolicyRAGTool", {"query": query}, lambda: self.policy_rag.search(query), label="政策 RAG 检索")
 
     def decide(self, *, message: str, intent: str, order: dict[str, Any] | None, user: dict[str, Any] | None, policy_hits: list[dict[str, Any]]) -> dict[str, Any]:
         return self.call(
             "DecisionTool",
             {"intent": intent, "order_id": order.get("order_id") if order else None},
             lambda: decide_aftersales(message=message, intent=intent, order=order, user=user, policy_hits=policy_hits),
+            label="售后决策",
         )
 
 
@@ -88,13 +93,13 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
             "next_steps": ["补充订单号", "说明商品问题和期望处理方式"],
         }
 
-    status = order.get("order_status") or ""
-    category = order.get("category") or ""
+    status = str(order.get("order_status") or "")
+    category = str(order.get("category") or "")
     amount = float(order.get("amount") or 0)
     fulfillment_hours = int(order.get("fulfillment_time") or 0)
-    tier = (user or {}).get("user_tier") or "Regular"
+    tier = str((user or {}).get("user_tier") or "Regular")
     priority = "P1" if amount >= 5000 else ("P2" if tier in {"VIP", "HighValue"} else "P3")
-    has_valid_image_evidence = "凭证有效：是" in message
+    has_valid_image_evidence = "凭证有效：是" in message or "凭证判断：有效" in message
     image_severe = "严重程度：严重" in message
 
     decision = {
@@ -139,9 +144,10 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
         )
         return decision
 
-    if category in {"食品生鲜", "食品饮料"} and (intent == "quality" or has_valid_image_evidence):
+    is_food = any(word in category for word in ["食品", "生鲜", "饮料"])
+    if is_food and (intent in {"quality", "refund"} or has_valid_image_evidence):
         decision.update(
-            status="approved",
+            status="approved" if has_valid_image_evidence else "need_info",
             resolution="refund_only",
             refund_amount=round(amount if has_valid_image_evidence else amount * 0.8, 2),
             compensation_amount=10.0 if has_valid_image_evidence else 0.0,
@@ -151,7 +157,7 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
         )
         return decision
 
-    if category == "美妆护肤" and any(word in message for word in ["过敏", "不适", "红肿"]):
+    if any(word in category for word in ["美妆", "护肤"]) and any(word in message for word in ["过敏", "不适", "红肿"]):
         decision.update(
             status="escalated",
             resolution="manual_review",
@@ -171,12 +177,12 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
         )
         return decision
 
-    if intent == "exchange" or (category == "服装鞋帽" and "尺码" in message):
+    if intent == "exchange" or (any(word in category for word in ["服装", "鞋帽"]) and "尺码" in message):
         decision.update(
             status="approved",
             resolution="exchange",
-            reason="服装鞋帽尺码问题在售后期内支持换货。",
-            next_steps=["确认目标尺码/颜色", "生成换货寄回地址", "仓库收货后寄出换货商品"],
+            reason="符合售后期内换货路径，可创建换货申请。",
+            next_steps=["确认目标尺码/颜色/型号", "生成换货寄回地址", "仓库收货后寄出换货商品"],
         )
         return decision
 
@@ -184,7 +190,7 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
         if fulfillment_hours <= 168 or intent == "quality":
             decision.update(
                 status="approved" if intent == "return_refund" or has_valid_image_evidence else "need_info",
-                resolution="return_refund" if not image_severe else "manual_review",
+                resolution="manual_review" if image_severe else "return_refund",
                 refund_amount=round(amount, 2) if intent == "return_refund" else 0,
                 need_human_review=image_severe or priority == "P1",
                 reason="符合售后期内退货退款路径；质量问题会结合图片凭证判断是否需要人工复核。",
@@ -203,7 +209,7 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
         decision.update(
             status="approved",
             resolution="invoice_support",
-            reason="发票问题不影响订单履约，可直接进入发票补开/重开流程。",
+            reason="发票问题不影响订单履约，可直接进入发票补开或重开流程。",
             next_steps=["补充发票抬头和税号", "确认邮箱或下载入口"],
         )
         return decision

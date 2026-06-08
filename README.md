@@ -105,3 +105,14 @@ KIMI_MODEL=moonshot-v1-8k-vision-preview
 ## 简历描述建议
 
 设计并实现 ShopCare Agent 电商售后智能决策系统，基于 38 万订单、9.8 万用户及 4 万售后工单构建业务数据底座；采用 ReAct 工具调用流程，实现订单查询、用户画像、相似案例检索、售后政策 RAG、退款/退货/换货/补发/人工升级决策，并通过前端展示 Agent 调用轨迹和决策依据。系统采用 FastAPI + React + SQLite 工程化实现，支持 DeepSeek/OpenAI 兼容 API 扩展和公网部署。
+
+## Agent Runtime 优化
+
+系统参考 Claude Code 的 Agent Runtime 思路，将售后处理拆成可观测的五层：
+
+- ContextManager：合并当前问题、浏览器传入的会话历史和后端短期记忆，支持多人并发隔离。
+- PlanningAgent：根据是否有图片、是否有订单号和售后意图生成执行计划。
+- Tool Runtime：订单查询、用户画像、政策 RAG、相似案例和决策工具统一输出 ToolTrace。
+- DecisionGuardrail：对退款金额、订单状态、优先级等关键字段做二次校验，避免模型或规则越权。
+- Response Layer：图片场景走 Kimi 多模态；纯文本场景走 DeepSeek；模型不可用时由规则答复兜底。
+

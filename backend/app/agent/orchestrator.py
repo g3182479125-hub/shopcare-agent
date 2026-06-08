@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from app.agent.kimi_vision_agent import KimiVisionAgent
 from app.agent.llm import OptionalLLMClient
 from app.agent.memory import conversation_memory
+from app.agent.prompts import TEXT_RESPONSE_SYSTEM_PROMPT, build_text_response_user_prompt
+from app.agent.runtime import build_agent_plan, build_context_snapshot, normalize_history, validate_decision
 from app.agent.tools import ShopcareTools, detect_intent, extract_order_id
 from app.config import get_settings
 from app.schemas import ChatResponse, ToolTrace
@@ -29,12 +30,21 @@ class ShopCareAgent:
         conversation_history: list[dict[str, str]] | None = None,
     ) -> ChatResponse:
         tools = ShopcareTools(self.repository)
-        history = (conversation_history or [])[-12:] or conversation_memory.get(session_id)
-        history_text = _format_history(history)
-        resolved_order_id = order_id or extract_order_id(message) or extract_order_id(history_text)
+        history = normalize_history(conversation_history) or conversation_memory.get(session_id)
+        context_snapshot = build_context_snapshot(message, history)
+        history_text = context_snapshot["history_text"]
+        resolved_order_id = order_id or extract_order_id(message) or context_snapshot.get("last_order_id")
+
+        tools.record_trace(
+            "ContextManager",
+            {"session_id": session_id, "history_turns": len(history)},
+            context_snapshot,
+            label="上下文管理",
+            summary=f"历史 {len(history)} 条，订单 {resolved_order_id or '待补充'}",
+        )
+
         image_analysis: dict[str, Any] | None = None
         image_llm_used = False
-
         if image_bytes:
             image_trace, image_analysis = await self._analyze_image(
                 image_bytes=image_bytes,
@@ -47,13 +57,24 @@ class ShopCareAgent:
                 message = message + "\n" + _format_image_context(image_analysis)
 
         intent = detect_intent(message)
+        plan = build_agent_plan(has_image=bool(image_bytes), has_order=bool(resolved_order_id), intent=intent)
+        tools.record_trace("PlanningAgent", {"intent": intent}, plan, label="任务规划", summary=" -> ".join(step["step"] for step in plan))
+
         order = tools.query_order(resolved_order_id) if resolved_order_id else None
         user = tools.query_user(order["user_id"]) if order and order.get("user_id") else None
         category = order.get("category") if order else None
         policy_query = " ".join([message, history_text, intent, category or ""])
         policy_hits = tools.search_policy(policy_query)
-        similar_cases = tools.search_cases(query=message, category=category) if order else tools.search_cases(query=message, category=None)
+        similar_cases = tools.search_cases(query=" ".join([message, history_text]), category=category) if order else tools.search_cases(query=message, category=None)
         decision = tools.decide(message=message, intent=intent, order=order, user=user, policy_hits=policy_hits)
+        decision, guardrails = validate_decision(order=order, decision=decision)
+        tools.record_trace(
+            "DecisionGuardrail",
+            {"order_id": order.get("order_id") if order else None},
+            {"decision": decision, "guardrails": guardrails},
+            label="决策校验",
+            summary="; ".join(guardrails) if guardrails else "无需修正",
+        )
 
         fallback_answer = self._compose_answer(
             message=message,
@@ -66,10 +87,6 @@ class ShopCareAgent:
             image_analysis=image_analysis,
         )
 
-        # Model routing:
-        # - With an image, Kimi is the only model provider. We use its multimodal
-        #   evidence and keep the final decision deterministic for speed.
-        # - Without an image, DeepSeek/OpenAI-compatible text LLM rewrites the reply.
         llm_answer: str | None = None
         llm_provider: str | None = None
         if image_bytes:
@@ -86,6 +103,8 @@ class ShopCareAgent:
                 image_analysis=image_analysis,
                 session_id=session_id,
                 conversation_history=history,
+                context_summary=context_snapshot["summary"],
+                agent_plan=plan,
             )
             if llm_answer:
                 llm_provider = self.settings.llm_provider or "deepseek"
@@ -145,13 +164,10 @@ class ShopCareAgent:
     def _deepseek_rewrite(self, **payload: Any) -> str | None:
         if not self.text_llm.enabled:
             return None
-        system = (
-            "你是电商售后智能客服。你只能基于给定 JSON 里的订单、用户、政策、"
-            "相似案例和决策输出回答，不得虚构退款金额、订单状态或政策。"
-            "回答要简洁、专业，并说明处理依据。"
+        return self.text_llm.complete(
+            system=TEXT_RESPONSE_SYSTEM_PROMPT,
+            user=build_text_response_user_prompt(payload),
         )
-        user = "请根据以下结构化上下文生成中文售后答复：\n" + json.dumps(payload, ensure_ascii=False, default=str)
-        return self.text_llm.complete(system=system, user=user)
 
     def _compose_answer(
         self,
@@ -194,14 +210,6 @@ class ShopCareAgent:
             lines.append(f"系统检索到 {len(similar_cases)} 条相似售后案例，常见处理方式包括 {similar_cases[0].get('resolution')}。")
         lines.append("该问题建议转人工复核。" if decision.get("need_human_review") else "暂不需要人工介入，可按流程继续处理。")
         return "\n".join(lines).strip()
-
-
-def _format_history(history: list[dict[str, str]]) -> str:
-    if not history:
-        return ""
-    recent = history[-8:]
-    lines = [f"{item.get('role', 'unknown')}: {item.get('content', '')}" for item in recent]
-    return "\n".join(lines)
 
 
 def _format_image_context(analysis: dict[str, Any]) -> str:
