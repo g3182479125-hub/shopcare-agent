@@ -10,10 +10,14 @@
   box-sizing: border-box;
 }
 
-body {
+html,
+body,
+#root {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   background: #f5f8fd;
 }
 
@@ -32,7 +36,8 @@ button:disabled {
 }
 
 .commerce-app {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background:
     linear-gradient(180deg, #ffffff 0%, #f5f8fd 18%),
     #f5f8fd;
@@ -51,6 +56,10 @@ button:disabled {
 
 .brand {
   display: flex;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0;
   align-items: center;
   gap: 14px;
 }
@@ -151,14 +160,17 @@ button:disabled {
 }
 
 .commerce-layout {
+  height: calc(100vh - 92px);
   display: grid;
   grid-template-columns: 240px minmax(560px, 1fr) 420px;
   gap: 24px;
   padding: 14px 30px 24px;
+  overflow: hidden;
 }
 
 .left-nav {
-  min-height: calc(100vh - 130px);
+  height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -205,8 +217,11 @@ button:disabled {
   box-shadow: 0 18px 40px rgba(194, 142, 31, 0.08);
 }
 
-.assurance-card div {
+.assurance-card button {
   display: flex;
+  border: 0;
+  background: transparent;
+  padding: 0;
   align-items: center;
   gap: 8px;
   margin-bottom: 16px;
@@ -214,7 +229,7 @@ button:disabled {
   font-weight: 900;
 }
 
-.assurance-card div svg {
+.assurance-card button svg {
   color: #f5a400;
 }
 
@@ -250,7 +265,8 @@ button:disabled {
 }
 
 .chat-card {
-  min-height: calc(100vh - 130px);
+  height: 100%;
+  min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(360px, 1fr) auto auto;
   overflow: hidden;
@@ -470,7 +486,9 @@ button:disabled {
 }
 
 .order-panel {
-  align-self: start;
+  height: 100%;
+  align-self: stretch;
+  overflow: hidden;
   padding: 26px;
 }
 
@@ -486,7 +504,9 @@ button:disabled {
   font-size: 22px;
 }
 
-.panel-head a {
+.panel-head button {
+  border: 0;
+  background: transparent;
   color: #2d6bff;
   font-weight: 900;
 }
@@ -575,6 +595,8 @@ button:disabled {
 
 .step {
   display: grid;
+  border: 0;
+  background: transparent;
   justify-items: center;
   gap: 7px;
   color: #78869a;
@@ -731,5 +753,97 @@ button:disabled {
 
   .order-input {
     display: none;
+  }
+}
+
+
+.avatar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: #1f2a44;
+  font-weight: 900;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 20;
+  transform: translateX(-50%);
+  padding: 12px 18px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #1f2a44;
+  box-shadow: 0 18px 38px rgba(31, 42, 68, 0.22);
+  font-weight: 900;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(20, 30, 48, 0.24);
+}
+
+.modal-card {
+  position: relative;
+  width: min(420px, calc(100% - 32px));
+  padding: 26px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 28px 70px rgba(31, 42, 68, 0.22);
+}
+
+.modal-card h2 {
+  margin: 0 0 12px;
+  color: #1f2a44;
+}
+
+.modal-card p {
+  margin: 0;
+  color: #5f6d82;
+  line-height: 1.75;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: #f0f4fb;
+  color: #52627a;
+}
+
+@media (max-width: 1180px) {
+  .commerce-layout {
+    height: calc(100vh - 92px);
+  }
+}
+
+@media (max-width: 760px) {
+  html,
+  body,
+  #root,
+  .commerce-app {
+    min-height: 100%;
+    height: auto;
+    overflow: auto;
+  }
+
+  .commerce-layout {
+    height: auto;
+    overflow: visible;
+  }
+
+  .chat-card {
+    height: calc(100vh - 190px);
   }
 }

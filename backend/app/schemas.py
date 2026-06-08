@@ -5,10 +5,16 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
+class ConversationItem(BaseModel):
+    role: str
+    content: str
+
+
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     order_id: Optional[str] = None
     session_id: Optional[str] = None
+    conversation_history: list[ConversationItem] = Field(default_factory=list)
 
 
 class ToolTrace(BaseModel):

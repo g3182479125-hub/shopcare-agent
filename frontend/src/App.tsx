@@ -1,6 +1,5 @@
-import { useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import {
-  Bell,
   Bot,
   Check,
   ClipboardList,
@@ -22,15 +21,13 @@ import {
   UserRound,
   X
 } from 'lucide-react'
-import { postChat } from './api'
+import { postChat, type ConversationHistoryItem } from './api'
 
 type ImageAnalysis = {
   product_condition: string
   damage_details: string[]
   severity: string
   evidence_valid: boolean
-  evidence_description?: string
-  suggested_action?: string
 }
 
 type Trace = {
@@ -61,23 +58,44 @@ type ChatMessage = {
   imageName?: string
 }
 
+type ModalState = {
+  title: string
+  body: string
+}
+
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 const DEFAULT_ORDER = '3000029'
 const DEFAULT_TEXT = '我收到的商品有破损，想申请退款怎么办？'
-
-const quickActions = [
-  { label: '申请退款', icon: Undo2, text: '我想申请退款，请帮我判断能否通过。' },
-  { label: '申请换货', icon: RefreshCw, text: '我想申请换货，请帮我看一下流程。' },
-  { label: '联系人工客服', icon: Headphones, text: '请帮我转人工客服处理。' }
-]
+const STORAGE_KEY = 'shopcare_chat_messages_v2'
 
 const navItems = [
-  { label: '首页', icon: Home },
-  { label: '售后咨询', icon: MessageSquare, active: true },
-  { label: '我的订单', icon: ClipboardList },
-  { label: '退款/退货', icon: Undo2 },
-  { label: '物流查询', icon: Truck },
-  { label: '帮助中心', icon: HelpCircle }
+  { label: '首页', icon: Home, action: 'home' },
+  { label: '售后咨询', icon: MessageSquare, action: 'support' },
+  { label: '我的订单', icon: ClipboardList, action: 'orders' },
+  { label: '退款/退货', icon: Undo2, action: 'refunds' },
+  { label: '物流查询', icon: Truck, action: 'logistics' },
+  { label: '帮助中心', icon: HelpCircle, action: 'help' }
+]
+
+const quickActions = [
+  { label: '申请退款', icon: Undo2, text: '我想申请退款，请基于前面的售后情况继续处理。' },
+  { label: '申请换货', icon: RefreshCw, text: '我想申请换货，请基于前面的售后情况继续处理。' },
+  { label: '联系人工客服', icon: Headphones, text: '请联系人工客服，并带上前面的售后上下文。' }
+]
+
+const initialMessages: ChatMessage[] = [
+  {
+    id: 'welcome-1',
+    role: 'assistant',
+    content: '您好，我是安心购智能售后助手。请描述商品问题，我会结合订单、售后政策和图片凭证帮您判断处理方式。',
+    time: '10:21'
+  },
+  {
+    id: 'welcome-2',
+    role: 'assistant',
+    content: '如果商品有破损、漏发、质量异常，可以直接上传照片。我会记住本轮对话的上下文，后续问题可以继续追问。',
+    time: '10:21'
+  }
 ]
 
 function createSessionId() {
@@ -86,6 +104,17 @@ function createSessionId() {
   const next = `web-${Date.now()}-${Math.random().toString(16).slice(2)}`
   window.localStorage.setItem('shopcare_session_id', next)
   return next
+}
+
+function loadMessages() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return initialMessages
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) && parsed.length ? parsed : initialMessages
+  } catch {
+    return initialMessages
+  }
 }
 
 function now() {
@@ -108,46 +137,35 @@ function statusText(status?: string) {
     need_info: '补充资料',
     escalated: '人工复核'
   }
-  return map[status || ''] || '待提交'
+  return map[status || ''] || '已签收'
 }
 
-function resolutionText(value?: string) {
-  const map: Record<string, string> = {
-    refund_only: '仅退款',
-    return_refund: '退货退款',
-    exchange: '换货',
-    manual_review: '人工复核',
-    reship: '补发',
-    need_order_id: '补充订单'
-  }
-  return map[value || ''] || '-'
+function historyFromMessages(items: ChatMessage[]): ConversationHistoryItem[] {
+  return items
+    .filter((item) => item.content && !item.id.startsWith('welcome'))
+    .slice(-12)
+    .map((item) => ({ role: item.role, content: item.content }))
 }
 
 export default function App() {
   const [sessionId] = useState(createSessionId)
+  const [activeNav, setActiveNav] = useState('support')
   const [orderId, setOrderId] = useState(DEFAULT_ORDER)
   const [input, setInput] = useState(DEFAULT_TEXT)
   const [result, setResult] = useState<ChatResult | null>(null)
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome-1',
-      role: 'assistant',
-      content: '您好，我是安心购智能售后助手。请描述商品问题，我会结合订单、售后政策和图片凭证帮您判断处理方式。',
-      time: '10:21'
-    },
-    {
-      id: 'welcome-2',
-      role: 'assistant',
-      content: '如果商品有破损、漏发、质量异常，可以直接上传照片。我会记住本轮对话的上下文，后续问题可以继续追问。',
-      time: '10:21'
-    }
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>(loadMessages)
   const [image, setImage] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
+  const [modal, setModal] = useState<ModalState | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const chatEndRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-40)))
+  }, [messages])
 
   const order = result?.order
   const decision = result?.decision || {}
@@ -156,7 +174,6 @@ export default function App() {
   const productName = order?.product_name || 'Daily Fresh Snack Box'
   const orderAmount = money(order?.amount ?? 159.8)
   const orderStatus = decision.status ? statusText(String(decision.status)) : '已签收'
-  const refundAmount = money(decision.refund_amount ?? order?.amount ?? 159.8)
 
   const progressSteps = useMemo(() => {
     const status = String(decision.status || '')
@@ -168,6 +185,24 @@ export default function App() {
       { label: '退款完成', done: false, sub: '' }
     ]
   }, [decision.status])
+
+  function notify(text: string) {
+    setToast(text)
+    window.setTimeout(() => setToast(''), 1800)
+  }
+
+  function openNav(action: string) {
+    setActiveNav(action)
+    const copy: Record<string, ModalState> = {
+      home: { title: '首页', body: '这里展示售后首页概览。当前演示聚焦智能售后咨询，你可以从左侧随时回到咨询页。' },
+      support: { title: '售后咨询', body: '当前页面就是可多轮追问的智能售后咨询窗口。' },
+      orders: { title: '我的订单', body: `当前演示订单为 ${order?.order_id || orderId}，商品为 ${productName}，金额 ${orderAmount}。` },
+      refunds: { title: '退款/退货', body: `当前售后状态：${orderStatus}。你可以点击右侧“申请退款”或“申请换货”继续办理。` },
+      logistics: { title: '物流查询', body: '中通快递 77305234123456，签收时间：2024-05-21 14:35:20，签收人：本人签收。' },
+      help: { title: '帮助中心', body: '支持咨询退款、退货、换货、补发、物流异常和人工客服。系统会记住当前会话上下文。' }
+    }
+    setModal(copy[action])
+  }
 
   function acceptFile(file?: File | null) {
     if (!file) return
@@ -183,6 +218,7 @@ export default function App() {
     setImage(file)
     setImageUrl(URL.createObjectURL(file))
     setError('')
+    notify('图片已添加')
   }
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -204,25 +240,23 @@ export default function App() {
       return
     }
 
-    const userImageUrl = imageUrl
-    const userImageName = image?.name
     const userMessage: ChatMessage = {
       id: `u-${Date.now()}`,
       role: 'user',
       content: text,
       time: now(),
-      imageUrl: userImageUrl || undefined,
-      imageName: userImageName
+      imageUrl: imageUrl || undefined,
+      imageName: image?.name
     }
+    const history = historyFromMessages(messages)
     setMessages((items) => [...items, userMessage])
     setInput('')
     setLoading(true)
     setError('')
-
     window.setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 60)
 
     try {
-      const data = await postChat(text, currentOrder, image, sessionId)
+      const data = await postChat(text, currentOrder, image, sessionId, history)
       setResult(data)
       const assistantMessage: ChatMessage = {
         id: `a-${Date.now()}`,
@@ -247,24 +281,41 @@ export default function App() {
     }
   }
 
+  async function copyText(text: string, label = '已复制') {
+    try {
+      await navigator.clipboard.writeText(text)
+      notify(label)
+    } catch {
+      notify('复制失败，请手动复制')
+    }
+  }
+
+  function clearChat() {
+    setMessages(initialMessages)
+    setResult(null)
+    window.localStorage.removeItem(STORAGE_KEY)
+    notify('会话已清空')
+  }
+
   return (
     <main className="commerce-app">
       <header className="commerce-header">
-        <div className="brand">
+        <button className="brand" type="button" onClick={() => openNav('home')}>
           <div className="bag-logo"><ShoppingBag size={28} /></div>
           <div>
             <strong>安心购</strong>
             <span>品质好物 · 售后无忧</span>
           </div>
-        </div>
+        </button>
         <label className="search-box">
-          <input placeholder="搜索商品、订单、帮助内容" />
+          <input placeholder="搜索商品、订单、帮助内容" onKeyDown={(event) => {
+            if (event.key === 'Enter') setModal({ title: '搜索结果', body: `已搜索：${event.currentTarget.value || '售后帮助'}。当前演示会把搜索结果接入售后助手。` })
+          }} />
           <Search size={22} />
         </label>
         <div className="user-tools">
-          <button className="message-button" type="button"><MessageSquare size={18} /> 消息 <b>2</b></button>
-          <div className="avatar">张</div>
-          <span>张小北</span>
+          <button className="message-button" type="button" onClick={() => setModal({ title: '消息中心', body: '你有 2 条售后提醒：退款申请待补充凭证、物流签收已完成。' })}><MessageSquare size={18} /> 消息 <b>2</b></button>
+          <button className="avatar-button" type="button" onClick={() => setModal({ title: '个人中心', body: `用户：张小北。当前会话 ID：${sessionId}` })}><div className="avatar">张</div><span>张小北</span></button>
         </div>
       </header>
 
@@ -273,15 +324,15 @@ export default function App() {
           <nav>
             {navItems.map((item) => {
               const Icon = item.icon
-              return <button key={item.label} className={item.active ? 'active' : ''} type="button"><Icon size={21} /> {item.label}</button>
+              return <button key={item.label} className={activeNav === item.action ? 'active' : ''} type="button" onClick={() => openNav(item.action)}><Icon size={21} /> {item.label}</button>
             })}
           </nav>
           <section className="assurance-card">
-            <div><Star size={18} /> 安心购 · 售后保障</div>
+            <button type="button" onClick={() => setModal({ title: '售后保障', body: '安心购支持 7 天无理由退货、极速退款、专业客服团队。食品生鲜类按平台食品安全售后策略处理。' })}><Star size={18} /> 安心购 · 售后保障</button>
             <p><Check size={15} /> 7天无理由退货</p>
             <p><Check size={15} /> 极速退款</p>
             <p><Check size={15} /> 专业客服团队</p>
-            <a>了解更多</a>
+            <a onClick={() => openNav('help')}>了解更多</a>
           </section>
         </aside>
 
@@ -292,7 +343,7 @@ export default function App() {
               <h1>智能售后助手 <span>AI</span></h1>
               <p>24小时在线 · 专业 · 高效 · 贴心 · {answerSource}</p>
             </div>
-            <button className="review-button" type="button"><Star size={17} /> 评价助手</button>
+            <button className="review-button" type="button" onClick={() => setModal({ title: '评价助手', body: '感谢评价。当前演示版本已记录你的反馈入口，后续可以接入评分接口。' })}><Star size={17} /> 评价助手</button>
           </div>
 
           <div className="chat-body">
@@ -328,6 +379,7 @@ export default function App() {
               const Icon = item.icon
               return <button key={item.label} type="button" onClick={() => submit(item.text)} disabled={loading}><Icon size={17} /> {item.label}</button>
             })}
+            <button type="button" onClick={clearChat}><X size={17} /> 清空会话</button>
           </div>
 
           <div className="composer">
@@ -347,10 +399,10 @@ export default function App() {
         <aside className="order-panel">
           <div className="panel-head">
             <h2>订单详情</h2>
-            <a>查看订单</a>
+            <button type="button" onClick={() => openNav('orders')}>查看订单</button>
           </div>
           <div className="order-meta">
-            <p><span>订单号：</span>{order?.order_id || orderId}<button type="button"><Copy size={14} /> 复制</button></p>
+            <p><span>订单号：</span>{order?.order_id || orderId}<button type="button" onClick={() => copyText(order?.order_id || orderId, '订单号已复制')}><Copy size={14} /> 复制</button></p>
             <p><span>下单时间：</span>2024-05-20 15:30:45</p>
             <p><span>订单状态：</span><b>{orderStatus}</b></p>
           </div>
@@ -368,18 +420,18 @@ export default function App() {
             <h3>退款进度</h3>
             <div className="steps">
               {progressSteps.map((step) => (
-                <div className={`step ${step.done ? 'done' : ''} ${step.active ? 'current' : ''}`} key={step.label}>
+                <button className={`step ${step.done ? 'done' : ''} ${step.active ? 'current' : ''}`} key={step.label} type="button" onClick={() => setModal({ title: step.label, body: step.sub || '等待售后流程推进。' })}>
                   <i>{step.done ? <Check size={13} /> : ''}</i>
                   <span>{step.label}</span>
                   <small>{step.sub}</small>
-                </div>
+                </button>
               ))}
             </div>
           </div>
 
           <div className="logistics-card">
             <h3><Truck size={18} /> 物流信息 <b>已签收</b></h3>
-            <p>中通快递　77305234123456 <button type="button">复制</button></p>
+            <p>中通快递　77305234123456 <button type="button" onClick={() => copyText('77305234123456', '物流单号已复制')}>复制</button></p>
             <p>签收时间：2024-05-21 14:35:20</p>
             <p>签收人：本人签收</p>
           </div>
@@ -391,6 +443,17 @@ export default function App() {
           </div>
         </aside>
       </div>
+
+      {toast && <div className="toast">{toast}</div>}
+      {modal && (
+        <div className="modal-backdrop" onClick={() => setModal(null)}>
+          <section className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" onClick={() => setModal(null)}><X size={18} /></button>
+            <h2>{modal.title}</h2>
+            <p>{modal.body}</p>
+          </section>
+        </div>
+      )}
     </main>
   )
 }

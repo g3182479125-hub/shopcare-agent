@@ -26,9 +26,10 @@ class ShopCareAgent:
         image_bytes: bytes | None = None,
         image_type: str | None = None,
         session_id: str | None = None,
+        conversation_history: list[dict[str, str]] | None = None,
     ) -> ChatResponse:
         tools = ShopcareTools(self.repository)
-        history = conversation_memory.get(session_id)
+        history = (conversation_history or [])[-12:] or conversation_memory.get(session_id)
         history_text = _format_history(history)
         resolved_order_id = order_id or extract_order_id(message) or extract_order_id(history_text)
         image_analysis: dict[str, Any] | None = None

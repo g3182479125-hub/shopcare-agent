@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import json
+from typing import Any
+
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agent.orchestrator import ShopCareAgent
 from app.config import get_settings
 from app.db import ensure_database, get_connection
-from app.schemas import ChatRequest, ChatResponse, DashboardSummary
+from app.schemas import ChatRequest, ChatResponse, ConversationItem, DashboardSummary
 from app.services.repository import ShopcareRepository
 
 settings = get_settings()
@@ -37,11 +40,13 @@ async def chat(
     message: str | None = Form(default=None),
     order_id: str | None = Form(default=None),
     session_id: str | None = Form(default=None),
+    conversation_history: str | None = Form(default=None),
     image: UploadFile | None = File(default=None),
 ) -> ChatResponse:
     content_type = request.headers.get("content-type", "")
     image_bytes: bytes | None = None
     image_type: str | None = None
+    history_items: list[dict[str, str]] = []
 
     if content_type.startswith("application/json"):
         try:
@@ -51,9 +56,11 @@ async def chat(
         message = payload.message
         order_id = payload.order_id
         session_id = payload.session_id
+        history_items = [item.model_dump() for item in payload.conversation_history[-12:]]
     else:
         if not message or not message.strip():
             raise HTTPException(status_code=400, detail="message is required")
+        history_items = _parse_history(conversation_history)
         if image:
             image_type = image.content_type or "application/octet-stream"
             if not image_type.startswith("image/"):
@@ -70,7 +77,27 @@ async def chat(
             image_bytes=image_bytes,
             image_type=image_type,
             session_id=session_id,
+            conversation_history=history_items,
         )
+
+
+def _parse_history(raw: str | None) -> list[dict[str, str]]:
+    if not raw:
+        return []
+    try:
+        parsed: Any = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    items: list[dict[str, str]] = []
+    for item in parsed[-12:]:
+        try:
+            model = ConversationItem.model_validate(item)
+        except Exception:
+            continue
+        items.append(model.model_dump())
+    return items
 
 
 @app.get("/api/orders/{order_id}")
