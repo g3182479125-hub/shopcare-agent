@@ -1,7 +1,7 @@
-{
+﻿{
   "orders": [
     {
-      "order_id": "DEMO3000010",
+      "order_id": "3000010",
       "user_id": "USER10001",
       "product_id": "P-MOBILE-01",
       "order_time": "2024-06-08 10:30:00",
@@ -27,7 +27,7 @@
       "description": "旗舰智能手机，支持快充和高刷屏幕"
     },
     {
-      "order_id": "DEMO3000012",
+      "order_id": "3000012",
       "user_id": "USER10002",
       "product_id": "P-LAPTOP-01",
       "order_time": "2024-05-28 15:20:00",
@@ -53,7 +53,7 @@
       "description": "高性能笔记本电脑，适合设计与开发场景"
     },
     {
-      "order_id": "DEMO3000025",
+      "order_id": "3000025",
       "user_id": "USER10003",
       "product_id": "P-PHONE-02",
       "order_time": "2024-06-01 09:15:00",
@@ -79,7 +79,7 @@
       "description": "高端智能手机，支持影像增强"
     },
     {
-      "order_id": "DEMO3000029",
+      "order_id": "3000029",
       "user_id": "USER10004",
       "product_id": "P-FOOD-01",
       "order_time": "2024-06-04 20:10:00",
@@ -186,7 +186,7 @@
   "aftersales_cases": [
     {
       "case_id": "CASE-DEMO-001",
-      "order_id": "DEMO3000010",
+      "order_id": "3000010",
       "user_id": "USER10001",
       "product_id": "P-MOBILE-01",
       "created_at": "2024-06-08 11:00:00",
@@ -221,7 +221,7 @@
     },
     {
       "case_id": "CASE-DEMO-002",
-      "order_id": "DEMO3000012",
+      "order_id": "3000012",
       "user_id": "USER10002",
       "product_id": "P-LAPTOP-01",
       "created_at": "2024-06-02 18:40:00",
@@ -256,7 +256,7 @@
     },
     {
       "case_id": "CASE-DEMO-003",
-      "order_id": "DEMO3000025",
+      "order_id": "3000025",
       "user_id": "USER10003",
       "product_id": "P-PHONE-02",
       "created_at": "2024-06-03 12:10:00",
@@ -291,7 +291,7 @@
     },
     {
       "case_id": "CASE-DEMO-004",
-      "order_id": "DEMO3000029",
+      "order_id": "3000029",
       "user_id": "USER10004",
       "product_id": "P-FOOD-01",
       "created_at": "2024-06-05 08:30:00",
