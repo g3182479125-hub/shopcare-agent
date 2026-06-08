@@ -10,6 +10,13 @@ ShopCare Agent 是一个面向电商售后的智能问答与决策系统。项�
 - 前端展示 Agent 工具调用轨迹，方便面试时解释系统不是简单聊天机器人。
 - 支持公网部署：后端 Render/Railway，前端 Vercel。
 
+## 在线演示
+
+- GitHub 仓库：https://github.com/g3182479125-hub/shopcare-agent
+- 公网 Demo：https://g3182479125-hub.github.io/shopcare-agent/
+
+公网 Demo 使用完全合成的示例数据，并内置前端兜底 Agent 流程；本地环境和后续 Render 后端部署后，会优先调用真实 FastAPI + LLM 接口。
+
 ## 技术栈
 
 - Backend: FastAPI, SQLite, OpenAI-compatible SDK

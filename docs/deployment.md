@@ -1,5 +1,13 @@
 # 部署说明
 
+## 0. 当前已完成的公网 Demo
+
+- GitHub 仓库：https://github.com/g3182479125-hub/shopcare-agent
+- GitHub Pages Demo：https://g3182479125-hub.github.io/shopcare-agent/
+
+当前 GitHub Pages 版本已经可以公网访问。它使用完全合成的 demo 数据和前端兜底 Agent 流程，适合先放进简历和项目介绍。要让公网版本接入真实 LLM 后端，需要继续完成 Render/Railway 后端部署，然后把前端环境变量 `VITE_API_BASE_URL` 指向后端域名。
+
+
 这个项目建议采用“后端 Render + 前端 Vercel”的方式上线。完整本地数据库不要上传到 GitHub；线上会在第一次启动时使用 `backend/app/data/demo_seed.json` 自动生成一个小型演示数据库，面试官打开网页就能直接体验。
 
 ## 1. 推送到 GitHub
