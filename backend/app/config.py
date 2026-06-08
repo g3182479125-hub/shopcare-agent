@@ -39,12 +39,12 @@ class Settings:
         self.llm_base_url = get("LLM_BASE_URL", "https://api.deepseek.com")
         self.llm_model = get("LLM_MODEL", "deepseek-chat")
         self.llm_temperature = float(get("LLM_TEMPERATURE", "0.2") or "0.2")
-        self.llm_timeout_seconds = float(get("LLM_TIMEOUT_SECONDS", "12") or "12")
+        self.llm_timeout_seconds = float(get("LLM_TIMEOUT_SECONDS", "6") or "6")
 
         self.kimi_api_key = get("KIMI_API_KEY")
         self.kimi_base_url = get("KIMI_BASE_URL", "https://api.moonshot.cn/v1")
         self.kimi_model = get("KIMI_MODEL", "moonshot-v1-8k-vision-preview")
-        self.kimi_timeout_seconds = float(get("KIMI_TIMEOUT_SECONDS", "8") or "8")
+        self.kimi_timeout_seconds = float(get("KIMI_TIMEOUT_SECONDS", "6") or "6")
 
         self.allow_origins = get(
             "ALLOW_ORIGINS",
