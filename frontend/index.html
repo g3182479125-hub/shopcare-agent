@@ -457,7 +457,7 @@
     .chat-main {
       min-height: 860px;
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto minmax(0, 1fr) auto;
       padding: 20px 24px;
     }
 
@@ -492,7 +492,7 @@
       padding: 24px 2px;
       overflow-y: auto;
       min-height: 0;
-      max-height: 680px;
+      height: 100%;
       scrollbar-width: thin;
     }
 
@@ -564,6 +564,43 @@
       color: rgba(255, 255, 255, 0.84);
       padding: 10px 14px;
       font-size: 13px;
+    }
+
+    .chat-main > div:last-child {
+      align-self: end;
+    }
+
+    .paste-tray {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 13px;
+    }
+
+    .paste-tray[hidden] {
+      display: none;
+    }
+
+    .paste-tray button {
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.86);
+      padding: 7px 11px;
+    }
+
+    .message-image {
+      max-width: 220px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: block;
     }
 
     .input-row {
@@ -860,8 +897,12 @@
               <button><iconify-icon icon="solar:chat-round-like-linear"></iconify-icon>商品咨询</button>
               <button><iconify-icon icon="solar:clipboard-list-linear"></iconify-icon>订单状态</button>
             </div>
+            <div id="pasteTray" class="paste-tray" hidden>
+              <span>已粘贴图片，发送后将调用 Kimi 视觉模型分析。</span>
+              <button type="button" id="clearPastedImage">移除</button>
+            </div>
             <div class="input-row">
-              <input placeholder="请输入您想咨询的问题..." />
+              <input placeholder="请输入您想咨询的问题，或直接 Ctrl+V 粘贴图片..." />
               <button class="send"><iconify-icon icon="solar:arrow-right-up-linear"></iconify-icon></button>
             </div>
           </div>
@@ -926,6 +967,9 @@
       const messages = document.querySelector('.messages');
       const input = document.querySelector('.input-row input');
       const sendButton = document.querySelector('.input-row .send');
+      const pasteTray = document.getElementById('pasteTray');
+      const clearPastedImage = document.getElementById('clearPastedImage');
+      let pastedImage = null;
 
       if (!messages || !input || !sendButton) return;
 
@@ -983,17 +1027,27 @@
       const ORDER_ID = '3000029';
       const conversationHistory = [];
 
-      const callAgentApi = async (value) => {
-        const response = await fetch(`${API_BASE}/api/agent/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+      const callAgentApi = async (value, imageFile) => {
+        const history = conversationHistory.slice(-10);
+        const options = { method: 'POST' };
+        if (imageFile) {
+          const form = new FormData();
+          form.append('message', value);
+          form.append('order_id', ORDER_ID);
+          form.append('session_id', 'web-demo-session');
+          form.append('conversation_history', JSON.stringify(history));
+          form.append('image', imageFile, imageFile.name || 'pasted-image.png');
+          options.body = form;
+        } else {
+          options.headers = { 'Content-Type': 'application/json' };
+          options.body = JSON.stringify({
             message: value,
             order_id: ORDER_ID,
             session_id: 'web-demo-session',
-            conversation_history: conversationHistory.slice(-10),
-          }),
-        });
+            conversation_history: history,
+          });
+        }
+        const response = await fetch(`${API_BASE}/api/agent/chat`, options);
         if (!response.ok) {
           throw new Error(`API ${response.status}`);
         }
@@ -1010,16 +1064,32 @@
       };
 
       const sendText = async (text) => {
-        const value = clean(text || input.value);
-        if (!value) return;
+        const value = clean(text || input.value || (pastedImage ? '请分析这张售后凭证图片' : ''));
+        const imageToSend = pastedImage;
+        if (!value && !imageToSend) return;
         addMessage('user', value);
-        conversationHistory.push({ role: 'user', content: value });
+        if (imageToSend) {
+          const imageUrl = URL.createObjectURL(imageToSend);
+          addMessage('user', `图片：${imageToSend.name || '粘贴图片'}`);
+          const last = messages.lastElementChild?.querySelector('.bubble');
+          if (last) {
+            last.innerHTML = '';
+            const img = document.createElement('img');
+            img.className = 'message-image';
+            img.src = imageUrl;
+            img.alt = '粘贴的售后凭证图片';
+            last.appendChild(img);
+          }
+        }
+        conversationHistory.push({ role: 'user', content: imageToSend ? `${value}\n[用户上传了一张售后凭证图片]` : value });
         input.value = '';
+        pastedImage = null;
+        updatePasteTray();
         input.disabled = true;
         sendButton.disabled = true;
         const thinking = addThinking();
         try {
-          const data = await callAgentApi(value);
+          const data = await callAgentApi(value, imageToSend);
           thinking.remove();
           const answer = data.answer || replyFor(value);
           addMessage('ai', answer);
@@ -1035,6 +1105,38 @@
           input.focus();
         }
       };
+
+
+      const updatePasteTray = () => {
+        if (!pasteTray) return;
+        pasteTray.hidden = !pastedImage;
+        const label = pasteTray.querySelector('span');
+        if (label && pastedImage) {
+          label.textContent = `已粘贴图片：${pastedImage.name || '剪贴板图片'}，发送后将调用 Kimi 视觉模型分析。`;
+        }
+      };
+
+      document.addEventListener('paste', (event) => {
+        const items = Array.from(event.clipboardData?.items || []);
+        const imageItem = items.find((item) => item.type.startsWith('image/'));
+        if (!imageItem) return;
+        const file = imageItem.getAsFile();
+        if (!file) return;
+        event.preventDefault();
+        const ext = file.type.split('/')[1] || 'png';
+        pastedImage = new File([file], `pasted-evidence.${ext}`, { type: file.type });
+        if (!clean(input.value)) {
+          input.value = '请分析这张售后凭证图片';
+        }
+        updatePasteTray();
+        input.focus();
+      });
+
+      clearPastedImage?.addEventListener('click', () => {
+        pastedImage = null;
+        updatePasteTray();
+        input.focus();
+      });
 
       sendButton.addEventListener('click', () => sendText());
       input.addEventListener('keydown', (event) => {

@@ -123,7 +123,7 @@ def detect_conversation_intent(message: str) -> str | None:
         return "help"
 
     # Very short non-business utterances are usually conversational turns.
-    business_words = ["退", "换", "坏", "破", "物流", "发票", "赔", "订单", "照片", "图片", "退款", "退货"]
+    business_words = ["退", "换", "坏", "破", "物流", "发票", "赔", "订单", "照片", "图片", "退款", "退货", "地址", "寄回", "寄到", "收货", "学校", "宿舍", "电话"]
     if len(compact) <= 8 and not extract_order_from_text(compact) and not any(word in compact for word in business_words):
         return "smalltalk"
     return None
