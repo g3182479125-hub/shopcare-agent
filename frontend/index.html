@@ -82,10 +82,10 @@
     }
 
     .page {
-      width: min(1440px, 100%);
+      width: min(1720px, calc(100% - 32px));
       min-height: 100vh;
       margin: 0 auto;
-      padding: 22px 20px 34px;
+      padding: 22px 0 34px;
     }
 
     .nav {
@@ -205,9 +205,9 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 280px minmax(680px, 1fr) 300px;
-      gap: 18px;
-      align-items: start;
+      grid-template-columns: 280px minmax(760px, 1fr) 300px;
+      gap: 22px;
+      align-items: stretch;
     }
 
     .glass {
@@ -363,7 +363,7 @@
     }
 
     .chat-shell {
-      min-height: 720px;
+      min-height: 860px;
       display: block;
       overflow: hidden;
     }
@@ -455,7 +455,7 @@
     }
 
     .chat-main {
-      min-height: 720px;
+      min-height: 860px;
       display: grid;
       grid-template-rows: auto 1fr auto;
       padding: 20px 24px;
@@ -492,7 +492,7 @@
       padding: 24px 2px;
       overflow-y: auto;
       min-height: 0;
-      max-height: 540px;
+      max-height: 680px;
       scrollbar-width: thin;
     }
 
@@ -689,7 +689,11 @@
 
     @media (max-width: 1320px) {
       .grid {
-        grid-template-columns: 260px minmax(560px, 1fr) 280px;
+        grid-template-columns: 260px minmax(620px, 1fr) 280px;
+      }
+
+      .page {
+        width: min(100% - 24px, 1320px);
       }
     }
 
@@ -786,7 +790,7 @@
           <div class="panel-head">
             <h2>服务历史</h2>
           </div>
-          <div class="timeline">
+          <div class="timeline" id="serviceHistory" aria-live="polite">
             <div class="timeline-item">
               <strong>商品破损申请退款</strong>
               <p>2024年7月18日  上传图片凭证，等待审核</p>
@@ -975,12 +979,61 @@
         return '收到。我会把这句话作为本次售后会话的上下文继续判断。为了更快处理，您可以补充：商品是否影响使用、是否有照片凭证、希望退款还是换货。';
       };
 
-      const sendText = (text) => {
+      const API_BASE = 'https://shopcare-agent-api.vercel.app';
+      const ORDER_ID = '3000029';
+      const conversationHistory = [];
+
+      const callAgentApi = async (value) => {
+        const response = await fetch(`${API_BASE}/api/agent/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: value,
+            order_id: ORDER_ID,
+            session_id: 'web-demo-session',
+            conversation_history: conversationHistory.slice(-10),
+          }),
+        });
+        if (!response.ok) {
+          throw new Error(`API ${response.status}`);
+        }
+        return response.json();
+      };
+
+      const addThinking = () => {
+        const article = document.createElement('article');
+        article.className = 'message thinking';
+        article.innerHTML = '<div class="bot-icon"><iconify-icon icon="solar:stars-bold" style="font-size:24px;"></iconify-icon></div><div class="bubble">正在调用后端 Agent 分析订单、政策和上下文...</div>';
+        messages.appendChild(article);
+        scrollChat();
+        return article;
+      };
+
+      const sendText = async (text) => {
         const value = clean(text || input.value);
         if (!value) return;
         addMessage('user', value);
+        conversationHistory.push({ role: 'user', content: value });
         input.value = '';
-        window.setTimeout(() => addMessage('ai', replyFor(value)), 260);
+        input.disabled = true;
+        sendButton.disabled = true;
+        const thinking = addThinking();
+        try {
+          const data = await callAgentApi(value);
+          thinking.remove();
+          const answer = data.answer || replyFor(value);
+          addMessage('ai', answer);
+          conversationHistory.push({ role: 'assistant', content: answer });
+        } catch (error) {
+          thinking.remove();
+          const fallback = `后端 API 暂时没有响应，先用本地规则兜底：${replyFor(value)}`;
+          addMessage('ai', fallback);
+          conversationHistory.push({ role: 'assistant', content: fallback });
+        } finally {
+          input.disabled = false;
+          sendButton.disabled = false;
+          input.focus();
+        }
       };
 
       sendButton.addEventListener('click', () => sendText());
@@ -990,6 +1043,34 @@
           sendText();
         }
       });
+
+
+      const renderServiceHistory = async () => {
+        const history = document.getElementById('serviceHistory');
+        if (!history) return;
+        history.innerHTML = '<div class="timeline-item"><strong>正在读取真实售后记录</strong><p>从后端订单详情接口加载中...</p></div>';
+        try {
+          const response = await fetch(`${API_BASE}/api/orders/${ORDER_ID}`);
+          if (!response.ok) throw new Error(`orders ${response.status}`);
+          const data = await response.json();
+          const cases = Array.isArray(data.cases) ? data.cases : [];
+          if (!cases.length) {
+            history.innerHTML = '<div class="timeline-item"><strong>暂无真实售后历史</strong><p>当前订单在数据库中没有历史售后案例。</p></div>';
+            return;
+          }
+          history.innerHTML = cases.map((item) => {
+            const title = `${item.case_type || '售后'} / ${item.reason_code || '未标注原因'}`;
+            const time = item.created_at || '时间未知';
+            const status = item.case_status || '状态未知';
+            const decision = item.agent_decision || '未判定';
+            return `<div class="timeline-item"><strong>${title}</strong><p>${time}  状态：${status}，决策：${decision}</p></div>`;
+          }).join('');
+        } catch (error) {
+          history.innerHTML = '<div class="timeline-item"><strong>售后历史读取失败</strong><p>请检查后端 API 部署状态；前端不会再展示假历史。</p></div>';
+        }
+      };
+
+      renderServiceHistory();
 
       document.querySelectorAll('.quick-replies button').forEach((button) => {
         button.addEventListener('click', () => sendText(clean(button.textContent)));
