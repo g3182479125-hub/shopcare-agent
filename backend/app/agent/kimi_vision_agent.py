@@ -81,7 +81,8 @@ JSON 格式如下：
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_content},
                         ],
-                        "max_tokens": 360,
+                        "max_tokens": 420,
+                        "temperature": 0.2,
                     },
                 )
                 response.raise_for_status()

@@ -101,10 +101,18 @@ def detect_conversation_intent(message: str) -> str | None:
     compact = "".join(text.split())
     if not compact:
         return None
+
+    confirm_words = [
+        "可以", "可以的", "好", "好的", "行", "行的", "没问题", "确认",
+        "就这样", "按这个来", "你操作吧", "帮我提交", "提交吧"
+    ]
     identity_words = ["你是谁", "你是誰", "你叫什么", "你叫啥", "介绍一下自己", "你能做什么", "你会什么"]
     greeting_words = ["你好", "您好", "hello", "hi", "在吗", "在不在"]
     thanks_words = ["谢谢", "感谢", "辛苦了", "太好了", "好的谢谢"]
     help_words = ["怎么用", "如何使用", "怎么操作", "流程是什么", "我该怎么做"]
+
+    if compact in confirm_words or any(word in compact for word in ["帮我提交", "提交吧", "你操作吧", "按这个来"]):
+        return "confirm"
     if any(word in compact for word in identity_words):
         return "identity"
     if any(word in compact for word in greeting_words):
@@ -113,7 +121,9 @@ def detect_conversation_intent(message: str) -> str | None:
         return "thanks"
     if any(word in compact for word in help_words):
         return "help"
+
     # Very short non-business utterances are usually conversational turns.
-    if len(compact) <= 8 and not extract_order_from_text(compact) and not any(word in compact for word in ["退", "换", "坏", "破", "物流", "发票", "赔"]):
+    business_words = ["退", "换", "坏", "破", "物流", "发票", "赔", "订单", "照片", "图片", "退款", "退货"]
+    if len(compact) <= 8 and not extract_order_from_text(compact) and not any(word in compact for word in business_words):
         return "smalltalk"
     return None

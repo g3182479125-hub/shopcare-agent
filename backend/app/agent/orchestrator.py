@@ -44,6 +44,15 @@ class ShopCareAgent:
         )
 
         conversation_intent = detect_conversation_intent(message)
+        if conversation_intent == "confirm" and not image_bytes:
+            return self._confirmation_reply(
+                message=message,
+                tools=tools,
+                session_id=session_id,
+                history=history,
+                context_snapshot=context_snapshot,
+                resolved_order_id=resolved_order_id,
+            )
         if conversation_intent and not image_bytes:
             return self._conversation_reply(
                 message=message,
@@ -96,6 +105,13 @@ class ShopCareAgent:
             decision=decision,
             image_analysis=image_analysis,
         )
+        if image_analysis:
+            fallback_answer = self._compose_image_answer(
+                order=order,
+                policy_hits=policy_hits,
+                decision=decision,
+                image_analysis=image_analysis,
+            )
 
         llm_answer: str | None = None
         llm_provider: str | None = None
@@ -135,6 +151,74 @@ class ShopCareAgent:
             llm_used=bool(llm_answer) or image_llm_used,
             llm_provider=llm_provider,
             image_analysis=image_analysis,
+        )
+
+    def _confirmation_reply(
+        self,
+        *,
+        message: str,
+        tools: ShopcareTools,
+        session_id: str | None,
+        history: list[dict[str, str]],
+        context_snapshot: dict[str, Any],
+        resolved_order_id: str | None,
+    ) -> ChatResponse:
+        recent_assistant = ""
+        for item in reversed(history):
+            if item.get("role") == "assistant":
+                recent_assistant = item.get("content", "")
+                break
+
+        last_order_id = resolved_order_id or context_snapshot.get("last_order_id")
+        looks_like_approval = any(
+            word in recent_assistant
+            for word in ["可以吗", "我这就", "提交", "申请", "退款", "换货", "处理结论", "回复“可以”", "回复\"可以\""]
+        )
+        if looks_like_approval:
+            order_part = f"订单 {last_order_id} " if last_order_id else "这次售后 "
+            answer = (
+                f"可以，我已经把{order_part}按刚才的结论整理好了：当前可以进入售后申请/商家审核这一步。"
+                "我会保留前面的图片和聊天上下文，后面你继续问“进度到哪了”或者“改成人工处理”，我都能接着这单往下说。\n\n"
+                "这里先说明一下：现在演示系统还没有接入真实电商后台的打款接口，所以我不会假装已经退款到账；接入后台后，这一步就可以变成真正的提交退款/换货工单。"
+            )
+            summary = "承接上一轮确认"
+        else:
+            answer = (
+                "好，我在。你可以直接把订单号、问题描述或者图片发我，我会接着当前会话继续判断，"
+                "不用从头再讲一遍。"
+            )
+            summary = "普通确认"
+
+        tools.record_trace(
+            "ConfirmationRouter",
+            {"message": message, "history_turns": len(history), "last_order_id": last_order_id},
+            {"answer": answer, "used_previous_assistant": bool(recent_assistant)},
+            label="确认承接",
+            summary=summary,
+        )
+        conversation_memory.append(session_id, role="user", content=message)
+        conversation_memory.append(session_id, role="assistant", content=answer)
+        return ChatResponse(
+            answer=answer,
+            intent="confirm",
+            decision={
+                "status": "confirmed",
+                "resolution": "continue_previous_plan",
+                "priority": "P3",
+                "need_human_review": False,
+                "refund_amount": 0,
+                "compensation_amount": 0,
+                "reason": "用户确认上一轮处理建议，系统承接上下文继续推进。",
+                "next_steps": ["保留当前会话上下文，继续跟进售后申请"],
+            },
+            order=None,
+            user_profile=None,
+            similar_cases=[],
+            policy_evidence=[],
+            traces=tools.traces,
+            llm_used=False,
+            llm_provider=None,
+            image_analysis=None,
         )
 
     def _conversation_reply(
@@ -228,6 +312,58 @@ class ShopCareAgent:
             user=build_text_response_user_prompt(payload),
         )
 
+    def _compose_image_answer(
+        self,
+        *,
+        order: dict[str, Any] | None,
+        policy_hits: list[dict[str, Any]],
+        decision: dict[str, Any],
+        image_analysis: dict[str, Any],
+    ) -> str:
+        condition = image_analysis.get("product_condition") or "我能看到商品存在异常"
+        details = "、".join(image_analysis.get("damage_details") or [])
+        evidence_valid = bool(image_analysis.get("evidence_valid"))
+        evidence_text = image_analysis.get("evidence_description") or ("这张图可以作为售后凭证" if evidence_valid else "这张图目前还不够完整")
+        severity = image_analysis.get("severity") or "中等"
+        resolution = decision.get("resolution")
+        status = decision.get("status")
+        refund_amount = float(decision.get("refund_amount") or 0)
+        compensation = float(decision.get("compensation_amount") or 0)
+        next_steps = "；".join(decision.get("next_steps") or [])
+
+        lines: list[str] = []
+        lines.append("我看过你上传的图片了，这张图不是白传的，我已经把它当作售后凭证一起判断了。")
+
+        if order:
+            lines.append(
+                f"对应的是订单 {order.get('order_id')}，商品是“{order.get('product_name')}”。"
+                f"图片里我看到：{condition}。"
+            )
+        else:
+            lines.append(f"图片里我看到：{condition}。")
+
+        if details:
+            lines.append(f"比较关键的点是：{details}。严重程度我先按“{severity}”处理。")
+        lines.append(f"凭证判断：{evidence_text}。")
+
+        if evidence_valid and status == "approved":
+            money_text = f"退款金额暂按 {refund_amount:.2f} 元处理" if refund_amount else "可以进入退款处理"
+            if compensation:
+                money_text += f"，另外建议补偿 {compensation:.2f} 元"
+            lines.append(f"所以这单我建议直接走 {resolution}，{money_text}。")
+            lines.append("如果你回复“可以”，我就按这个结论继续帮你整理成待提交的售后申请。")
+        elif evidence_valid:
+            lines.append(f"这张图能支撑你的诉求，但这单还需要按 {resolution} 再走一步核验。")
+            lines.append("你可以回复“可以”，我会把当前图片和订单上下文一起带到下一步。")
+        else:
+            lines.append("不过为了让审核更稳，我建议你再补一张更清楚的照片：尽量拍到商品整体、破损位置和外包装。")
+
+        if next_steps:
+            lines.append(f"下一步很简单：{next_steps}。")
+        if policy_hits:
+            lines.append(f"我参考的规则是：{policy_hits[0].get('title')}。")
+        return "\n\n".join(lines).strip()
+
     def _compose_answer(
         self,
         *,
@@ -246,9 +382,8 @@ class ShopCareAgent:
         lines = [
             f"我先帮你看了这单：{order.get('order_id')}，商品是 {order.get('product_name')}，现在状态是 {order.get('order_status')}。"
         ]
-        if user:
-            if user.get("user_tier") in {"VIP", "HighValue"}:
-                lines.append("你是平台的高价值用户，这类售后我会优先按更稳妥的方式处理。")
+        if user and user.get("user_tier") in {"VIP", "HighValue"}:
+            lines.append("你是平台的高价值用户，这类售后我会优先按更稳妥的方式处理。")
         if image_analysis:
             details = "、".join(image_analysis.get("damage_details") or [])
             valid_text = "有效" if image_analysis.get("evidence_valid") else "暂不充分"
