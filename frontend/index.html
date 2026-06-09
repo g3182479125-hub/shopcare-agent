@@ -1,563 +1,924 @@
-<html lang="en"><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ShopCare Agent - 电商售后智能体</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Inter+Tight:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script><!-- aura-ga4-start -->
-<script async="" src="https://www.googletagmanager.com/gtag/js?id=G-2M6V79H761"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-2M6V79H761');
-</script>
-<!-- aura-ga4-end -->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopCare Agent - 售后服务中心</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  <style>
+    :root {
+      --bg: #0A0D10;
+      --panel: rgba(30, 35, 45, 0.42);
+      --panel-strong: rgba(38, 45, 56, 0.58);
+      --border: rgba(255, 255, 255, 0.09);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --text: rgba(255, 255, 255, 0.94);
+      --muted: rgba(255, 255, 255, 0.62);
+      --faint: rgba(255, 255, 255, 0.36);
+      --green: #86efac;
+      --blue: #b9d8ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
+
+    body {
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      background:
+        linear-gradient(120deg, rgba(10, 13, 16, 0.72), rgba(13, 21, 23, 0.52), rgba(10, 13, 16, 0.78)),
+        url("/post-sales-bg.png") center / cover no-repeat;
+      filter: blur(3px) saturate(0.78) brightness(0.62);
+      transform: scale(1.04);
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(circle at 35% 18%, rgba(177, 211, 137, 0.18), transparent 28%),
+        radial-gradient(circle at 80% 20%, rgba(126, 176, 150, 0.16), transparent 26%),
+        radial-gradient(circle at 52% 64%, rgba(255, 246, 180, 0.12), transparent 20%),
+        linear-gradient(180deg, rgba(6, 8, 10, 0.38), rgba(6, 8, 10, 0.76));
+      pointer-events: none;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .page {
+      width: min(1440px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 22px 28px 34px;
+    }
+
+    .nav {
+      display: grid;
+      grid-template-columns: 240px 1fr 240px;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 24px;
+      height: 24px;
+    }
+
+    .brand-mark i {
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 0 18px rgba(255, 255, 255, 0.28);
+    }
+
+    .brand-mark i:nth-child(1) { left: 2px; top: 3px; }
+    .brand-mark i:nth-child(2) { left: 14px; top: 2px; }
+    .brand-mark i:nth-child(3) { left: 8px; top: 14px; }
+    .brand-mark i:nth-child(4) { left: 18px; top: 15px; }
+
+    .nav-links {
+      justify-self: center;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(18, 22, 27, 0.48);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 50px rgba(0, 0, 0, 0.22);
+    }
+
+    .nav-links a {
+      padding: 9px 18px;
+      border-radius: 999px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 14px;
+      transition: color 160ms ease, background 160ms ease;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-actions {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 14px;
+    }
+
+    .white-pill {
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #101418;
+      padding: 11px 22px;
+      font-weight: 600;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+    }
+
+    .hero-title {
+      margin: 58px auto 28px;
+      text-align: center;
+    }
+
+    .hero-title h1 {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.96);
+      font-size: clamp(44px, 5.3vw, 76px);
+      line-height: 0.94;
+      font-weight: 500;
+      letter-spacing: -0.065em;
+    }
+
+    .hero-title span {
+      display: block;
+      margin-top: 4px;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: clamp(40px, 4.8vw, 68px);
+      font-weight: 400;
+      letter-spacing: -0.06em;
+    }
+
+    .hero-title p {
+      max-width: 620px;
+      margin: 18px auto 0;
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 280px minmax(560px, 1fr) 300px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .glass {
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--panel);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .stack {
+      display: grid;
+      gap: 20px;
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .panel h2,
+    .panel h3 {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: -0.035em;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(134, 239, 172, 0.22);
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.14);
+      color: var(--green);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 12px rgba(134, 239, 172, 0.7);
+    }
+
+    .product {
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .thumb {
+      width: 82px;
+      height: 82px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+      color: rgba(255, 255, 255, 0.72);
+    }
+
+    .product strong {
+      display: block;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 15px;
+      line-height: 1.35;
+      font-weight: 600;
+    }
+
+    .product b {
+      display: block;
+      margin-top: 6px;
+      color: rgba(255, 255, 255, 0.95);
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .meta-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+
+    .meta-list p,
+    .timeline p,
+    .article-list a {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .meta-list span {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .timeline {
+      position: relative;
+      display: grid;
+      gap: 18px;
+      padding-left: 18px;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 7px;
+      bottom: 7px;
+      width: 1px;
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .timeline-item {
+      position: relative;
+    }
+
+    .timeline-item::before {
+      content: "";
+      position: absolute;
+      left: -18px;
+      top: 5px;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.84);
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.32);
+    }
+
+    .timeline strong {
+      display: block;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .chat-shell {
+      min-height: 660px;
+      display: grid;
+      grid-template-columns: 210px 1fr 220px;
+      overflow: hidden;
+    }
+
+    .chat-sidebar,
+    .agent-menu {
+      padding: 20px;
+      border-right: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .agent-menu {
+      border-right: 0;
+      border-left: 1px solid var(--border);
+    }
+
+    .context-title,
+    .agent-title {
+      margin: 0 0 16px;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: -0.04em;
+    }
+
+    .profile {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(220, 230, 210, 0.55));
+      color: #111820;
+      font-weight: 700;
+    }
+
+    .profile strong {
+      display: block;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 14px;
+    }
+
+    .profile span {
+      display: block;
+      max-width: 118px;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .side-tabs {
+      display: grid;
+      gap: 8px;
+    }
+
+    .side-tabs button,
+    .suggestion {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 0;
+      border-radius: 14px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.72);
+      padding: 11px 10px;
+      text-align: left;
+      transition: background 160ms ease, color 160ms ease;
+    }
+
+    .side-tabs button:hover,
+    .side-tabs button.active,
+    .suggestion:hover,
+    .suggestion.active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    .chat-main {
+      min-height: 660px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 18px 22px;
+    }
+
+    .chat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .chat-top h2 {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .context-pill {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.72);
+      padding: 7px 13px;
+      font-size: 12px;
+    }
+
+    .messages {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      padding: 28px 0;
+    }
+
+    .message {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .bot-icon {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      color: rgba(255, 255, 255, 0.86);
+    }
+
+    .bubble {
+      max-width: 72%;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.86);
+      padding: 13px 16px;
+      font-size: 14px;
+      line-height: 1.65;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .message.user .bubble {
+      border-color: rgba(255, 255, 255, 0.05);
+      background: rgba(10, 12, 14, 0.56);
+      color: rgba(255, 255, 255, 0.9);
+      border-radius: 18px 18px 6px 18px;
+    }
+
+    .user-photo {
+      width: 68px;
+      height: 68px;
+      align-self: center;
+      border-radius: 999px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(200, 210, 190, 0.35)),
+        url("https://qclay.design/lovable/synergy/person-2.png") center 18% / cover;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22);
+    }
+
+    .quick-replies {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+
+    .quick-replies button {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.84);
+      padding: 10px 14px;
+      font-size: 13px;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 42px;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.055);
+      padding: 8px 8px 8px 18px;
+    }
+
+    .input-row input {
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .input-row input::placeholder {
+      color: rgba(255, 255, 255, 0.38);
+    }
+
+    .send {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #101418;
+    }
+
+    .agent-menu p {
+      margin: 0 0 16px;
+      color: rgba(255, 255, 255, 0.56);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .suggestion-list {
+      display: grid;
+      gap: 6px;
+      padding-right: 4px;
+    }
+
+    .suggestion span:first-child {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      margin-bottom: 14px;
+      padding: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tabs button {
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.58);
+      padding: 8px 9px;
+      font-size: 12px;
+    }
+
+    .tabs button.active {
+      color: #111820;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .article-list {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0 0 0 18px;
+    }
+
+    .article-list a:hover {
+      color: #fff;
+    }
+
+    .support-button {
+      width: 100%;
+      margin-top: 18px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #101418;
+      padding: 13px 18px;
+      font-weight: 600;
+    }
+
+    .analytics-card {
+      margin-top: 14px;
+      min-height: 120px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+      padding: 14px;
+    }
+
+    .chart {
+      height: 58px;
+      margin-top: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      background:
+        linear-gradient(120deg, transparent 0 18%, rgba(134, 239, 172, 0.4) 18% 20%, transparent 20% 44%, rgba(134, 239, 172, 0.52) 44% 46%, transparent 46% 72%, rgba(134, 239, 172, 0.62) 72% 74%, transparent 74%),
+        linear-gradient(180deg, rgba(134, 239, 172, 0.12), transparent);
+      clip-path: polygon(0 78%, 14% 70%, 30% 74%, 46% 52%, 62% 59%, 76% 32%, 100% 36%, 100% 100%, 0 100%);
+    }
+
+    .sparkle {
+      position: fixed;
+      right: 22px;
+      bottom: 58px;
+      width: 86px;
+      height: 86px;
+      pointer-events: none;
+      opacity: 0.86;
+      filter: drop-shadow(0 0 28px rgba(255, 255, 255, 0.24));
+    }
+
+    .sparkle::before,
+    .sparkle::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      background: rgba(255, 255, 255, 0.9);
+      clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
+    }
+
+    .sparkle::after {
+      width: 38px;
+      height: 38px;
+      left: -42px;
+      top: -30px;
+      opacity: 0.6;
+    }
+
+    @media (max-width: 1180px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-shell {
+        grid-template-columns: 200px 1fr;
+      }
+
+      .agent-menu {
+        grid-column: 1 / -1;
+        border-left: 0;
+        border-top: 1px solid var(--border);
+      }
+    }
+  </style>
 </head>
+<body>
+  <main class="page">
+    <nav class="nav">
+      <a class="brand" href="#">
+        <span class="brand-mark"><i></i><i></i><i></i><i></i></span>
+        <span>ShopCare</span>
+      </a>
 
-<body class="bg-black text-white antialiased" style="font-family:'Inter Tight',system-ui,sans-serif;">
-  <main>
-    <section id="hero" class="relative min-h-screen overflow-hidden bg-black">
-      <video id="heroVideo" class="absolute inset-0 z-0 h-full w-full object-cover" autoplay="" muted="" loop="" playsinline="" webkit-playsinline=""></video>
-      <div class="absolute inset-0 z-[1]" style="background:linear-gradient(to bottom,rgba(0,0,0,.60) 0%,rgba(0,0,0,.15) 50%,rgba(0,0,0,.65) 100%);"></div>
-
-      <nav class="fixed left-0 right-0 top-0 z-50 px-4 py-4 md:px-8">
-        <div class="relative flex h-12 items-center">
-          <a href="#" class="flex items-center">
-            <img src="https://qclay.design/lovable/synergy/Logo-lov.svg" alt="ShopCare Agent" class="hidden"><span class="text-[1.05rem] font-semibold tracking-tight text-white">ShopCare Agent</span>
-          </a>
-
-          <div class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 rounded-full border px-2 py-1.5 md:flex" style="background:rgba(28,28,28,.75);border-color:rgba(255,255,255,.10);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
-            <a href="#" class="nav-pill rounded-full px-4 py-2 text-[0.875rem] font-normal text-white/80">售后助手</a>
-            <a href="#analytics" class="nav-pill rounded-full px-4 py-2 text-[0.875rem] font-normal text-white/80">能力总览</a>
-            <a href="#ai" class="nav-pill rounded-full px-4 py-2 text-[0.875rem] font-normal text-white/80">AI 决策</a>
-            <a href="#" class="nav-pill rounded-full px-4 py-2 text-[0.875rem] font-normal text-white/80">工具链</a>
-          </div>
-
-          <div class="ml-auto flex items-center gap-2">
-            <a href="#analytics" class="hidden rounded-full px-4 py-2 text-[0.875rem] text-white/80 sm:block">Demo</a>
-            <a href="#ai" class="rounded-full bg-white px-5 py-2.5 text-[0.875rem] font-normal text-black">查看 Agent</a>
-          </div>
-        </div>
-      </nav>
-
-      <div class="absolute inset-0 z-10 flex flex-col items-center justify-center px-5 pt-20">
-        <h1 data-reveal="" data-y="-40" data-duration="900" class="text-center text-[4rem] font-normal leading-[0.94] tracking-tight text-white opacity-0 md:text-[6.375rem]" style="transform:translateY(-40px);">
-          <span class="block">AI handles</span>
-          <span class="block">
-            <span>your </span><span style="font-family:'Instrument Serif',serif;font-style:italic;">after-sales flow</span>
-          </span>
-        </h1>
-
-        <button data-reveal="" data-y="30" data-delay="250" data-duration="800" class="mt-8 flex items-center gap-2 rounded-full bg-white py-1.5 pl-6 pr-2 text-[0.9375rem] font-normal text-black opacity-0" style="transform:translateY(30px);">
-          Start after-sales demo
-          <span class="flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
-            <iconify-icon icon="solar:arrow-right-up-linear" style="font-size:.875rem;stroke-width:1.5;"></iconify-icon>
-          </span>
-        </button>
-
-        <div class="mt-12" style="perspective:1200px;">
-          <div id="storyCard" data-reveal="" data-y="30" data-delay="200" data-duration="800" class="relative h-[455px] w-[310px] overflow-hidden rounded-[28px] bg-[#1a1a1a] opacity-0 will-change-transform" style="transform-style:preserve-3d;transform:translateY(30px);box-shadow:0 40px 100px rgba(0,0,0,.55),0 8px 24px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 0 1px rgba(255,255,255,.06);">
-            <img src="https://qclay.design/lovable/synergy/person-2.png" alt="" class="absolute inset-0 h-full w-full object-cover" style="object-position:center 20%;">
-            <div class="pointer-events-none absolute inset-0" style="mix-blend-mode:soft-light;background:linear-gradient(160deg,rgba(220,255,90,.65) 0%,rgba(170,230,70,.35) 40%,rgba(80,140,40,.25) 100%);"></div>
-            <div class="pointer-events-none absolute inset-0" style="background:radial-gradient(circle at 30% 15%,rgba(230,255,120,.25),transparent 55%);"></div>
-            <div class="pointer-events-none absolute inset-0 rounded-[28px]" style="box-shadow:inset 0 1px 0 rgba(255,255,255,.25);"></div>
-
-            <div class="absolute left-6 right-6 top-6 z-20 flex gap-1.5">
-              <div class="h-[3px] flex-1 overflow-hidden rounded-full" style="background:rgba(0,0,0,.25);">
-                <div id="storyBar1" class="h-full origin-left rounded-full" style="background:rgba(0,0,0,.95);transform:scaleX(0);"></div>
-              </div>
-              <div class="h-[3px] flex-1 overflow-hidden rounded-full" style="background:rgba(0,0,0,.25);">
-                <div id="storyBar2" class="h-full origin-left rounded-full" style="background:rgba(0,0,0,.95);transform:scaleX(0);"></div>
-              </div>
-            </div>
-
-            <div class="absolute bottom-0 left-0 right-0 h-[55%]" style="background:linear-gradient(0deg,#040504 20.54%,rgba(29,37,9,0) 100%);"></div>
-
-            <h3 id="storyHeadline" class="absolute bottom-[88px] left-6 right-6 z-10 text-[2.375rem] font-normal leading-[2.5rem] tracking-tight text-white" style="text-shadow:0 2px 18px rgba(0,0,0,.35);">
-              <span class="font-semibold">Resolving</span><br>
-              <span style="font-family:'Instrument Serif',serif;font-style:italic;">returns faster</span>
-            </h3>
-
-            <div class="absolute bottom-6 left-6 right-6 z-10 flex items-center gap-2.5">
-              <span class="rounded-full px-4 py-[9px] text-[0.8125rem] font-normal text-[#0a0a0a]" style="background:rgba(255,255,255,.96);box-shadow:0 6px 18px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.9);">Evidence Ready</span>
-              <button class="flex h-[38px] w-[38px] items-center justify-center rounded-[14px] border text-white" style="background:rgba(20,20,20,.45);border-color:rgba(255,255,255,.14);backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.12);">
-                <iconify-icon icon="solar:heart-linear" style="font-size:1.125rem;stroke-width:1.5;"></iconify-icon>
-              </button>
-              <button class="flex h-[38px] w-[38px] items-center justify-center rounded-[14px] border text-white" style="background:rgba(20,20,20,.45);border-color:rgba(255,255,255,.14);backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.12);">
-                <iconify-icon icon="solar:chat-round-line-linear" style="font-size:1.125rem;stroke-width:1.5;"></iconify-icon>
-              </button>
-            </div>
-          </div>
-        </div>
+      <div class="nav-links">
+        <a class="active" href="#">Product</a>
+        <a href="#">Service</a>
+        <a href="#">About Us</a>
+        <a href="#">Help</a>
       </div>
 
-      <div class="absolute bottom-10 left-10 z-10 hidden lg:block">
-        <h2 class="mb-[18px] text-[1.3125rem] font-normal leading-[1.2] text-white/60 tracking-tight">Project ready</h2>
-        <div class="w-[430px] overflow-hidden">
-          <div id="marquee" class="flex w-max gap-[54px]">
-            <img src="https://qclay.design/lovable/synergy/logo-taa.png" class="h-[30px] w-auto shrink-0 object-contain" style="filter:brightness(0) invert(1) opacity(.55);" alt="">
-            <img src="https://qclay.design/lovable/synergy/logo-harris.png" class="h-[30px] w-auto shrink-0 object-contain" style="filter:brightness(0) invert(1) opacity(.55);" alt="">
-            <img src="https://qclay.design/lovable/synergy/logo-siemens.png" class="h-[30px] w-auto shrink-0 object-contain" style="filter:brightness(0) invert(1) opacity(.55);" alt="">
-            <img src="https://qclay.design/lovable/synergy/logo-summit.png" class="h-[30px] w-auto shrink-0 object-contain" style="filter:brightness(0) invert(1) opacity(.55);" alt="">
-            <img src="https://qclay.design/lovable/synergy/logo-taa.png" class="h-[30px] w-auto shrink-0 object-contain" style="filter:brightness(0) invert(1) opacity(.55);" alt="">
-            <img src="https://qclay.design/lovable/synergy/logo-harris.png" class="h-[30px] w-auto shrink-0 object-contain" style="filter:brightness(0) invert(1) opacity(.55);" alt="">
-            <img src="https://qclay.design/lovable/synergy/logo-siemens.png" class="h-[30px] w-auto shrink-0 object-contain" style="filter:brightness(0) invert(1) opacity(.55);" alt="">
-            <img src="https://qclay.design/lovable/synergy/logo-summit.png" class="h-[30px] w-auto shrink-0 object-contain" style="filter:brightness(0) invert(1) opacity(.55);" alt="">
+      <div class="nav-actions">
+        <a href="#">Login</a>
+        <button class="white-pill">Find Advisor</button>
+      </div>
+    </nav>
+
+    <header class="hero-title">
+      <h1>Your Post-Sales Center</h1>
+      <span>您的售后服务中心</span>
+      <p>整合订单信息、售后历史、AI 建议、退款换货与人工客服，让每一次售后处理都有上下文、有依据、可追踪。</p>
+    </header>
+
+    <section class="grid">
+      <aside class="stack">
+        <section class="glass panel">
+          <div class="panel-head">
+            <h2>您的订单信息</h2>
+            <span class="status-badge">已签收</span>
           </div>
-        </div>
-      </div>
 
-      <div class="absolute bottom-10 right-10 z-10 hidden max-w-[430px] lg:block">
-        <p class="mb-3 text-[1.3125rem] font-normal leading-[1.4] tracking-tight text-white">ShopCare Agent turns orders, refund policies, image evidence and customer context into one explainable after-sales decision desk.</p>
-        <a href="#" class="text-[1.3125rem] font-normal tracking-tight text-white underline">View agent flow</a>
-      </div>
-    </section>
-
-    <section id="analytics" class="overflow-hidden bg-black px-5 py-20 md:px-12">
-      <div id="analyticsTrigger" class="mb-16 text-center">
-        <div class="mb-4 text-[0.75rem] font-normal uppercase tracking-[0.125rem] text-white/50">AFTER-SALES ANALYTICS</div>
-        <h2 data-scope="analytics" data-reveal="" data-y="30" data-blur="12" data-duration="800" class="m-0 text-white opacity-0" style="transform:translateY(30px);filter:blur(12px);">
-          <span class="block text-[3.5rem] font-normal leading-none tracking-tight md:text-[4.5rem]">Smarter service</span>
-          <span class="block text-[3.5rem] font-normal italic leading-none tracking-tight md:text-[4.5rem]" style="font-family:'Instrument Serif',serif;">decisions at a glance</span>
-        </h2>
-        <p data-scope="analytics" data-reveal="" data-y="20" data-blur="8" data-delay="200" data-duration="800" class="mt-4 text-[1rem] font-normal text-white/60 opacity-0" style="transform:translateY(20px);filter:blur(8px);">Track orders, refund risk, evidence status and customer value with real-time AI.</p>
-      </div>
-
-      <div class="mx-auto flex max-w-[1200px] flex-col items-stretch gap-4 lg:flex-row">
-        <article data-scope="analytics" data-reveal="" data-x="-60" data-delay="300" data-duration="800" class="relative min-h-[480px] flex-[1.4] overflow-hidden rounded-3xl opacity-0" style="transform:translateX(-60px);">
-          <img src="https://qclay.design/lovable/synergy/block-1.png" alt="" class="absolute inset-0 z-0 h-full w-full object-cover">
-          <div class="absolute inset-0 z-[1]" style="background:rgba(0,0,0,.35);"></div>
-
-          <div class="absolute left-8 right-8 top-8 z-[2] rounded-[20px] border px-7 py-6" style="border-color:rgba(255,255,255,.20);background:rgba(255,255,255,.10);backdrop-filter:blur(56px);-webkit-backdrop-filter:blur(56px);">
-            <div class="mb-2 flex items-center justify-between">
-              <span class="text-[0.6875rem] font-normal tracking-[0.09375rem] text-white/60">AFTER-SALES OVERVIEW</span>
-              <span class="text-[0.6875rem] font-normal tracking-[0.09375rem] text-white/60 underline">LIVE</span>
+          <div class="product">
+            <div class="thumb">
+              <iconify-icon icon="solar:box-minimalistic-bold-duotone" style="font-size:38px;"></iconify-icon>
             </div>
-            <div id="countMain" class="mb-6 text-[2.625rem] font-normal tracking-tight text-white tabular-nums">4.0万</div>
-            <div class="mb-5 w-full border-t border-dashed border-white/20"></div>
-
-            <div class="mb-4">
-              <div class="flex items-center justify-between text-[0.8125rem]"><span class="text-white/70">订单量</span><span class="font-normal text-white">38.2万</span></div>
-              <div class="relative mt-1.5 h-[5px] w-full overflow-hidden rounded-full">
-                <div class="absolute inset-0 opacity-[.13]" style="background:linear-gradient(90deg,#040504 0%,rgba(4,5,4,.50) 100%);"></div>
-                <div class="absolute left-0 top-0 h-full w-[75%] rounded-full" style="background:linear-gradient(90deg,#1DC47D 60.8%,rgba(29,196,125,0) 100%);"></div>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <div class="flex items-center justify-between text-[0.8125rem]"><span class="text-white/70">售后工单</span><span class="font-normal text-white">4.0万</span></div>
-              <div class="relative mt-1.5 h-[5px] w-full overflow-hidden rounded-full">
-                <div class="absolute inset-0 opacity-[.13]" style="background:linear-gradient(90deg,#040504 0%,rgba(4,5,4,.50) 100%);"></div>
-                <div class="absolute left-0 top-0 h-full w-[45%] rounded-full" style="background:linear-gradient(90deg,#B48F17 55.74%,rgba(180,143,23,0) 100%);"></div>
-              </div>
-            </div>
-
             <div>
-              <div class="flex items-center justify-between text-[0.8125rem]"><span class="text-white/70">退款金额</span><span class="font-normal text-white">4479.2万</span></div>
-              <div class="relative mt-1.5 h-[5px] w-full overflow-hidden rounded-full">
-                <div class="absolute inset-0 opacity-[.13]" style="background:linear-gradient(90deg,#040504 0%,rgba(4,5,4,.50) 100%);"></div>
-                <div class="absolute left-0 top-0 h-full w-[60%] rounded-full" style="background:linear-gradient(90deg,#fff 52.46%,rgba(255,255,255,0) 100%);"></div>
-              </div>
+              <strong>智能恒温空气净化器 Pro</strong>
+              <b>$1450.00</b>
             </div>
           </div>
 
-          <div class="absolute bottom-[22px] left-8 right-8 z-[2]">
-            <h3 class="mb-2 text-[1.625rem] font-normal italic tracking-tight text-white" style="font-family:'Instrument Serif',serif;">See the full picture of every after-sales case.</h3>
-            <p class="m-0 text-[0.8125rem] font-normal leading-[1.6] text-white/65">AI connects order data, user profile, policy rules and image evidence so customer service can answer faster with traceable decisions.</p>
+          <div class="meta-list">
+            <p>订单编号：<span>23300029</span></p>
+            <p>商品规格：<span>1801 × 180.4 / 冷凝灰</span></p>
+            <p>重量：<span>2.8 kg</span></p>
+            <p>订单状态：<span>已签收，可申请售后</span></p>
           </div>
-        </article>
+        </section>
 
-        <article data-scope="analytics" data-reveal="" data-x="60" data-delay="450" data-duration="800" class="relative min-h-[480px] flex-1 overflow-hidden rounded-3xl opacity-0" style="transform:translateX(60px);">
-          <img src="https://qclay.design/lovable/synergy/block-2.png" alt="" class="absolute inset-0 z-0 h-full w-full object-cover">
-          <div class="absolute inset-0 z-[1]" style="background:rgba(0,0,0,.25);"></div>
-          <div class="absolute right-6 top-6 z-[2] text-[0.6875rem] font-normal tracking-[0.09375rem] text-white/70 underline">DAILY</div>
-
-          <div class="absolute left-8 top-8 z-[2] w-[200px] rounded-2xl bg-white px-[18px] py-4 shadow-2xl">
-            <div class="flex items-start justify-between">
-              <div id="countSmall" class="text-[1.375rem] font-normal tracking-tight text-black tabular-nums">127.84</div>
-              <iconify-icon icon="solar:info-circle-linear" style="font-size:1rem;color:rgba(0,0,0,.35);stroke-width:1.5;"></iconify-icon>
-            </div>
-            <div class="mb-3.5 text-[0.75rem] text-black/45">Refund suggested</div>
-            <button class="flex w-full items-center justify-between rounded-full bg-black py-2.5 pl-3.5 pr-2 text-[0.8125rem] font-normal text-white">
-              View case
-              <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/15">
-                <iconify-icon icon="solar:arrow-right-up-linear" style="font-size:.8125rem;stroke-width:1.5;"></iconify-icon>
-              </span>
-            </button>
+        <section class="glass panel">
+          <div class="panel-head">
+            <h2>服务历史</h2>
           </div>
-
-          <img src="https://qclay.design/lovable/synergy/person-2.png" alt="" class="absolute bottom-[140px] left-1/2 z-[2] h-[240px] w-[200px] -translate-x-1/2 rounded-2xl object-cover" style="object-position:top center;">
-          <div class="absolute bottom-[160px] right-6 z-[3] flex items-center gap-2">
-            <div class="flex items-center gap-2 rounded-full py-2 pl-2.5 pr-4" style="background:rgba(255,255,255,.15);backdrop-filter:blur(12px);">
-              <img src="https://qclay.design/lovable/synergy/Logo-lov.svg" alt="" class="h-[22px] w-auto brightness-0 invert">
+          <div class="timeline">
+            <div class="timeline-item">
+              <strong>商品破损申请退款</strong>
+              <p>2024年7月18日  上传图片凭证，等待审核</p>
             </div>
-            <button class="flex h-9 w-9 items-center justify-center rounded-full text-white" style="background:rgba(255,255,255,.15);backdrop-filter:blur(12px);">
-              <iconify-icon icon="solar:arrow-right-up-linear" style="font-size:1rem;stroke-width:1.5;"></iconify-icon>
-            </button>
-          </div>
-
-          <div class="absolute bottom-[22px] left-8 right-8 z-[2]">
-            <h3 class="mb-2 text-[1.5rem] font-normal italic tracking-tight text-white" style="font-family:'Instrument Serif',serif;">Every order, clearer outcomes</h3>
-            <p class="m-0 text-[0.8125rem] font-normal leading-[1.6] text-white/65">Keep refund, exchange, evidence and manual-review cases visible in one clean decision flow.</p>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section id="ai" class="overflow-hidden bg-black px-5 py-20 md:px-12">
-      <div id="aiTrigger" class="mb-16 text-center">
-        <div class="mb-4 text-[0.75rem] font-normal uppercase tracking-[0.125rem] text-white/50">AI INTELLIGENCE</div>
-        <h2 data-scope="ai" data-reveal="" data-y="30" data-blur="12" data-duration="800" class="m-0 text-white opacity-0" style="transform:translateY(30px);filter:blur(12px);">
-          <span class="text-[3.5rem] font-normal leading-none tracking-tight md:text-[4.5rem]">Your ecommerce </span>
-          <span class="text-[3.5rem] font-normal italic leading-none tracking-tight md:text-[4.5rem]" style="font-family:'Instrument Serif',serif;">AI service agent</span>
-        </h2>
-        <p data-scope="ai" data-reveal="" data-y="20" data-blur="8" data-delay="200" data-duration="800" class="mx-auto mt-4 max-w-2xl text-center text-[1rem] font-normal leading-[1.6] text-white/60 opacity-0" style="transform:translateY(20px);filter:blur(8px);">Use AI to understand customer intent, inspect evidence, search policy and produce after-sales actions.</p>
-      </div>
-
-      <div class="mx-auto flex max-w-[1200px] flex-col items-stretch gap-4 lg:flex-row">
-        <article data-scope="ai" data-reveal="" data-y="40" data-delay="200" data-duration="700" class="relative min-h-[560px] flex-1 overflow-hidden rounded-3xl opacity-0" style="transform:translateY(40px);">
-          <img src="https://qclay.design/lovable/synergy/back-3-1.png" alt="" class="absolute inset-0 z-0 h-full w-full object-cover">
-          <div class="absolute inset-0 z-[1]" style="background:rgba(0,0,0,.30);"></div>
-
-          <div class="absolute left-6 right-6 top-8 z-[2] rounded-[20px] border p-5" style="border-color:rgba(255,255,255,.20);background:rgba(255,255,255,.10);backdrop-filter:blur(56px);-webkit-backdrop-filter:blur(56px);">
-            <div class="mb-4 flex items-center gap-2.5">
-              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
-                <img src="https://qclay.design/lovable/synergy/Logo-lov.svg" alt="" class="w-[22px] brightness-0">
-              </div>
-              <span class="text-[1rem] font-normal text-white">ShopCare Agent</span>
+            <div class="timeline-item">
+              <strong>换货申请</strong>
+              <p>2023年11月02日  物流包装异常，已完成处理</p>
             </div>
-            <div class="mb-4 border-t border-dashed border-white/20"></div>
-
-            <div id="qaBlock" class="relative h-40">
-              <div class="absolute inset-0">
-                <p id="qaQuestion" class="mb-3 text-[1rem] font-normal leading-[1.4] text-white">这个食品礼盒包装破损，可以直接退款吗？</p>
-                <div class="flex items-start gap-2">
-                  <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/15">
-                    <img src="https://qclay.design/lovable/synergy/Logo-lov.svg" class="w-3 opacity-80 brightness-0 invert" alt="">
-                  </div>
-                  <p id="qaAnswer" class="m-0 text-[0.75rem] font-normal leading-[1.6] text-white/55">已读取订单 3000029、食品生鲜售后政策和图片凭证。建议仅退款 127.84 元，并保留证据记录用于后续核验。</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-4 flex items-center justify-between">
-              <button class="flex items-center gap-2 rounded-full bg-white py-1.5 pl-4 pr-1.5 text-[0.8125rem] font-normal text-black">
-                View case
-                <span class="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-black text-white">
-                  <iconify-icon icon="solar:arrow-right-up-linear" style="font-size:.75rem;stroke-width:1.5;"></iconify-icon>
-                </span>
-              </button>
-              <a class="text-[0.8125rem] font-normal text-white/80 underline" href="#">ASK CASE</a>
+            <div class="timeline-item">
+              <strong>商品咨询</strong>
+              <p>2023年08月16日  咨询保修期限与配件信息</p>
             </div>
           </div>
+        </section>
+      </aside>
 
-          <div class="absolute bottom-7 left-6 right-6 z-[2]">
-            <h3 class="mb-2 text-[1.625rem] font-normal italic tracking-tight text-white" style="font-family:'Instrument Serif',serif;">Natural after-sales conversations</h3>
-            <p class="text-[0.8125rem] font-normal leading-[1.6] text-white/65">Customers can speak naturally; the agent keeps context and turns vague complaints into clear refund, exchange or evidence steps.</p>
-          </div>
-        </article>
-
-        <article data-scope="ai" data-reveal="" data-y="40" data-delay="350" data-duration="700" class="relative min-h-[560px] flex-1 overflow-hidden rounded-3xl opacity-0" style="transform:translateY(40px);">
-          <img src="https://qclay.design/lovable/synergy/back-3-2.png" alt="" class="absolute inset-0 z-0 h-full w-full object-cover">
-          <div class="absolute inset-0 z-[1]" style="background:rgba(0,0,0,.20);"></div>
-
-          <div class="absolute left-6 right-6 top-8 z-[2]">
-            <div class="rounded-[20px] px-5 pb-5 pt-6 text-center" style="background:rgba(255,255,255,.92);">
-              <div class="mb-1 text-[0.75rem] font-normal leading-[1.5] text-black/50">Evidence<br>confidence</div>
-              <div class="text-[3.25rem] font-normal italic leading-none tracking-tight text-black" style="font-family:'Instrument Serif',serif;">92%</div>
-              <div class="h-4"></div>
-
-              <div class="relative mx-auto h-[145px] w-[280px] max-w-full overflow-visible">
-                <svg viewBox="60 -25 220 145" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;">
-                  <defs>
-                    <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stop-color="rgba(180,210,80,.85)"></stop>
-                      <stop offset="100%" stop-color="rgba(180,210,80,.10)"></stop>
-                    </linearGradient>
-                    <clipPath id="reveal">
-                      <rect id="chartReveal" x="60" y="-25" width="0" height="145"></rect>
-                    </clipPath>
-                  </defs>
-                  <g clip-path="url(#reveal)">
-                    <path d="M 60 75 L 150 20 L 280 28 L 280 120 L 60 120 Z" fill="url(#areaFill)"></path>
-                    <path d="M 60 75 L 150 20 L 280 28" fill="none" stroke="#8DB800" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></path>
-                    <line x1="60" y1="75" x2="60" y2="120" stroke="#8DB800" stroke-width="1" stroke-dasharray="3 3" opacity=".6"></line>
-                    <line x1="280" y1="28" x2="280" y2="120" stroke="#8DB800" stroke-width="1" stroke-dasharray="3 3" opacity=".6"></line>
-                  </g>
-                  <line id="greenConnector" x1="150" y1="-15" x2="150" y2="20" stroke="#1DC47D" stroke-width="1.2" stroke-dasharray="36" stroke-dashoffset="36"></line>
-                  <circle id="greenDot" cx="150" cy="-15" r="4.5" fill="#1DC47D" style="transform-box:fill-box;transform-origin:center;transform:scale(0);"></circle>
-                </svg>
-              </div>
-
-              <div class="mt-4 inline-block rounded-full border px-4 py-2 text-center text-[0.6875rem] text-black/60" style="border-color:rgba(0,0,0,.12);background:rgba(255,255,255,.80);backdrop-filter:blur(8px);">Tip: photo evidence is valid for packaging damage.</div>
+      <section class="glass chat-shell">
+        <aside class="chat-sidebar">
+          <h3 class="context-title">Context</h3>
+          <div class="profile">
+            <div class="avatar">AI</div>
+            <div>
+              <strong>AI-agent</strong>
+              <span>产品召回 / 商品咨询 / 图片凭证</span>
             </div>
           </div>
-
-          <div class="absolute bottom-7 left-6 right-6 z-[2]">
-            <h3 class="mb-2 text-[1.625rem] font-normal italic tracking-tight text-white" style="font-family:'Instrument Serif',serif;">Evidence-aware decisions</h3>
-            <p class="text-[0.8125rem] font-normal leading-[1.6] text-white/65">When images are uploaded, Kimi Vision checks damage details while the text model continues the service conversation.</p>
+          <div class="side-tabs">
+            <button class="active"><span>换货申请</span><iconify-icon icon="solar:refresh-linear"></iconify-icon></button>
+            <button><span>订单状态</span><iconify-icon icon="solar:clipboard-list-linear"></iconify-icon></button>
+            <button><span>物流查询</span><iconify-icon icon="solar:delivery-linear"></iconify-icon></button>
+            <button><span>退款进度</span><iconify-icon icon="solar:card-transfer-linear"></iconify-icon></button>
           </div>
-        </article>
+          <button class="support-button" style="margin-top:190px;background:rgba(255,255,255,0.12);color:#fff;">Talk to AI</button>
+        </aside>
 
-        <article data-scope="ai" data-reveal="" data-y="40" data-delay="500" data-duration="700" class="relative min-h-[560px] flex-1 overflow-hidden rounded-3xl opacity-0" style="transform:translateY(40px);">
-          <img src="https://qclay.design/lovable/synergy/back-3-3.png" alt="" class="absolute inset-0 z-0 h-full w-full object-cover">
-          <div class="absolute inset-0 z-[1]" style="background:rgba(0,0,0,.30);"></div>
+        <section class="chat-main">
+          <div class="chat-top">
+            <h2>售后咨询对话</h2>
+            <span class="context-pill">Context</span>
+          </div>
 
-          <div class="absolute left-4 right-4 top-8 bottom-[110px] z-[2]">
-            <svg class="absolute inset-0 z-[1] h-full w-full overflow-visible" viewBox="0 0 360 380" preserveAspectRatio="none">
-              <defs>
-                <path id="tree-path-0" d="M180 44 C180 73,105 73,105 102"></path>
-                <path id="tree-path-1" d="M180 44 C180 73,255 73,255 102"></path>
-                <path id="tree-path-2" d="M105 140 C105 166,105 166,105 192"></path>
-                <path id="tree-path-3" d="M255 140 C255 166,255 166,255 192"></path>
-                <path id="tree-path-4" d="M180 44 C180 171,180 171,180 298"></path>
-                <path id="tree-path-5" d="M180 334 C180 347,180 347,180 360"></path>
-              </defs>
-              <g class="tree-line" opacity="0">
-                <path d="M180 44 C180 73,105 73,105 102" stroke="rgba(255,255,255,.35)" stroke-width="1" fill="none"></path>
-                <path d="M180 44 C180 73,255 73,255 102" stroke="rgba(255,255,255,.35)" stroke-width="1" fill="none"></path>
-                <path d="M105 140 C105 166,105 166,105 192" stroke="rgba(255,255,255,.35)" stroke-width="1" fill="none"></path>
-                <path d="M255 140 C255 166,255 166,255 192" stroke="rgba(255,255,255,.35)" stroke-width="1" fill="none"></path>
-                <path d="M180 44 C180 171,180 171,180 298" stroke="rgba(255,255,255,.35)" stroke-width="1" fill="none"></path>
-                <path d="M180 334 C180 347,180 347,180 360" stroke="rgba(255,255,255,.35)" stroke-width="1" fill="none"></path>
-                <circle cx="105" cy="102" r="2.5" fill="rgba(255,255,255,.9)"></circle>
-                <circle cx="255" cy="102" r="2.5" fill="rgba(255,255,255,.9)"></circle>
-                <circle cx="105" cy="192" r="2.5" fill="rgba(255,255,255,.9)"></circle>
-                <circle cx="255" cy="192" r="2.5" fill="rgba(255,255,255,.9)"></circle>
-                <circle cx="180" cy="298" r="2.5" fill="rgba(255,255,255,.9)"></circle>
-                <circle cx="180" cy="360" r="2.5" fill="rgba(255,255,255,.9)"></circle>
-                <circle r="3" fill="#fff" style="filter:drop-shadow(0 0 4px rgba(255,255,255,.8));"><animateMotion dur="2.4s" repeatCount="indefinite" begin=".85s"><mpath href="#tree-path-0"></mpath></animateMotion></circle>
-                <circle r="3" fill="#fff" style="filter:drop-shadow(0 0 4px rgba(255,255,255,.8));"><animateMotion dur="2.4s" repeatCount="indefinite" begin="1s"><mpath href="#tree-path-1"></mpath></animateMotion></circle>
-                <circle r="3" fill="#fff" style="filter:drop-shadow(0 0 4px rgba(255,255,255,.8));"><animateMotion dur="2.4s" repeatCount="indefinite" begin="1.2s"><mpath href="#tree-path-2"></mpath></animateMotion></circle>
-                <circle r="3" fill="#fff" style="filter:drop-shadow(0 0 4px rgba(255,255,255,.8));"><animateMotion dur="2.4s" repeatCount="indefinite" begin="1.38s"><mpath href="#tree-path-3"></mpath></animateMotion></circle>
-                <circle r="3" fill="#fff" style="filter:drop-shadow(0 0 4px rgba(255,255,255,.8));"><animateMotion dur="2.4s" repeatCount="indefinite" begin="1.55s"><mpath href="#tree-path-4"></mpath></animateMotion></circle>
-                <circle r="3" fill="#fff" style="filter:drop-shadow(0 0 4px rgba(255,255,255,.8));"><animateMotion dur="2.4s" repeatCount="indefinite" begin="1.75s"><mpath href="#tree-path-5"></mpath></animateMotion></circle>
-              </g>
-            </svg>
+          <div class="messages">
+            <article class="message">
+              <div class="bot-icon"><iconify-icon icon="solar:stars-bold" style="font-size:24px;"></iconify-icon></div>
+              <div class="bubble">您好，关于您购买的智能净化器，有什么我可以帮您处理的吗？</div>
+            </article>
 
-            <div class="relative z-[2] flex h-full flex-col items-center gap-[18px]">
-              <div class="tree-node rounded-full border px-5 py-2.5 text-[1rem] italic text-white opacity-0" data-delay="0" style="font-family:'Instrument Serif',serif;border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.10);backdrop-filter:blur(20px);transform:scale(.85);">Intent</div>
-              <div class="flex gap-4">
-                <div class="tree-node rounded-full border px-5 py-2.5 text-[1rem] italic text-white opacity-0" data-delay="180" style="font-family:'Instrument Serif',serif;border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.10);backdrop-filter:blur(20px);transform:scale(.85);">Refund</div>
-                <div class="tree-node rounded-full border px-5 py-2.5 text-[1rem] italic text-white opacity-0" data-delay="360" style="font-family:'Instrument Serif',serif;border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.10);backdrop-filter:blur(20px);transform:scale(.85);">Exchange</div>
-              </div>
-              <div class="flex items-start gap-4">
-                <div class="tree-node max-w-[160px] rounded-xl px-4 py-2.5 text-[0.75rem] font-normal leading-[1.5] text-black/75 opacity-0" data-delay="540" style="background:rgba(255,255,255,.92);transform:scale(.85);">Only refund, return refund, exchange, compensation</div>
-                <div class="tree-node max-w-[160px] rounded-xl px-4 py-2.5 text-[0.75rem] font-normal leading-[1.5] text-black/75 opacity-0" data-delay="720" style="background:rgba(255,255,255,.92);transform:scale(.85);">Policy matched, evidence needed, manual review</div>
-              </div>
-              <div class="mt-auto tree-node rounded-full border px-5 py-2.5 text-[1rem] italic text-white opacity-0" data-delay="900" style="font-family:'Instrument Serif',serif;border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.10);backdrop-filter:blur(20px);transform:scale(.85);">Decision</div>
-              <div class="tree-node max-w-[160px] rounded-xl px-4 py-2.5 text-center text-[0.75rem] font-normal leading-[1.5] text-black/75 opacity-0" data-delay="1080" style="background:rgba(255,255,255,.92);transform:scale(.85);">Approved, rejected, need info, manual review</div>
+            <article class="message user">
+              <div class="bubble">我收到的商品和描述不符，而且外壳有划痕。</div>
+            </article>
+
+            <div class="user-photo"></div>
+
+            <article class="message">
+              <div class="bot-icon"><iconify-icon icon="solar:stars-bold" style="font-size:24px;"></iconify-icon></div>
+              <div class="bubble">我已经读取订单状态、历史售后记录和平台政策。您可以先上传商品外壳照片，我会判断是否符合极速退款或换货条件。</div>
+            </article>
+
+            <article class="message user">
+              <div class="bubble">我想先申请退款，可以吗？</div>
+            </article>
+          </div>
+
+          <div>
+            <div class="quick-replies">
+              <button><iconify-icon icon="solar:dollar-minimalistic-linear"></iconify-icon>申请退款</button>
+              <button><iconify-icon icon="solar:refresh-linear"></iconify-icon>申请换货</button>
+              <button><iconify-icon icon="solar:chat-round-like-linear"></iconify-icon>商品咨询</button>
+              <button><iconify-icon icon="solar:clipboard-list-linear"></iconify-icon>订单状态</button>
+            </div>
+            <div class="input-row">
+              <input placeholder="请输入您想咨询的问题..." />
+              <button class="send"><iconify-icon icon="solar:arrow-right-up-linear"></iconify-icon></button>
             </div>
           </div>
+        </section>
 
-          <div class="absolute bottom-7 left-6 right-6 z-[2]">
-            <h3 class="mb-2 text-[1.625rem] font-normal italic tracking-tight text-white" style="font-family:'Instrument Serif',serif;">Smart Intent</h3>
-            <p class="text-[0.8125rem] font-normal leading-[1.6] text-white/65">Classify after-sales intent, match policy and produce a traceable next action for customer service.</p>
+        <aside class="agent-menu">
+          <h3 class="agent-title">AI-Agent</h3>
+          <p>AI-Agent 会根据订单、政策和凭证，推荐下一步处理方式：</p>
+          <div class="suggestion-list">
+            <button class="suggestion active"><span><iconify-icon icon="solar:dollar-minimalistic-linear"></iconify-icon>极速退款</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span><iconify-icon icon="solar:add-circle-linear"></iconify-icon>换货申请</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span><iconify-icon icon="solar:repeat-one-linear"></iconify-icon>退货退款</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span><iconify-icon icon="solar:chat-round-dots-linear"></iconify-icon>商品咨询</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span><iconify-icon icon="solar:clipboard-list-linear"></iconify-icon>订单状态</span><iconify-icon icon="solar:alt-arrow-down-linear"></iconify-icon></button>
           </div>
-        </article>
-      </div>
+        </aside>
+      </section>
+
+      <aside class="stack">
+        <section class="glass panel">
+          <div class="panel-head">
+            <h2>AI 建议</h2>
+            <span class="context-pill">智能判断</span>
+          </div>
+          <div class="suggestion-list">
+            <button class="suggestion active"><span>Instant Refund</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span>Replacement Application</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span>Product Consulting</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span>Order Status</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+          </div>
+        </section>
+
+        <section class="glass panel">
+          <div class="tabs">
+            <button class="active">Recommended</button>
+            <button>Articles</button>
+            <button>Human</button>
+          </div>
+
+          <ul class="article-list">
+            <li><a href="#">如何上传有效的商品破损照片</a></li>
+            <li><a href="#">七天无理由退货和特殊品类说明</a></li>
+            <li><a href="#">换货申请审核需要多久</a></li>
+            <li><a href="#">联系人工客服前需要准备什么</a></li>
+          </ul>
+
+          <div class="analytics-card">
+            <p style="margin:0;color:var(--muted);font-size:13px;">当前售后处理趋势</p>
+            <div class="chart"></div>
+          </div>
+
+          <button class="support-button">Contact Support</button>
+        </section>
+      </aside>
     </section>
   </main>
-
-  <script>
-    const video = document.getElementById('heroVideo');
-    const source = 'https://stream.mux.com/rfmAy41mljxrk4K28xbeP6bt7UOMsf6d6Ce7C7Ul4vs.m3u8';
-    video.muted = true;
-    video.defaultMuted = true;
-    video.autoplay = true;
-    video.loop = true;
-    video.playsInline = true;
-    video.setAttribute('webkit-playsinline', '');
-    const tryPlay = () => video.play().catch(() => console.warn('Video play blocked'));
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = source;
-      video.addEventListener('loadedmetadata', tryPlay);
-    } else if (window.Hls && Hls.isSupported()) {
-      const hls = new Hls({ enableWorker: true });
-      hls.loadSource(source);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
-    } else {
-      video.src = source;
-      video.addEventListener('loadedmetadata', tryPlay);
-    }
-
-    document.querySelectorAll('.nav-pill').forEach((el) => {
-      el.addEventListener('mouseenter', () => el.style.background = 'rgba(255,255,255,.10)');
-      el.addEventListener('mouseleave', () => el.style.background = 'transparent');
-    });
-
-    const ease = 'cubic-bezier(.22,1,.36,1)';
-    function revealElement(el) {
-      const delay = Number(el.dataset.delay || 0);
-      const duration = Number(el.dataset.duration || 800);
-      const x = Number(el.dataset.x || 0);
-      const y = Number(el.dataset.y || 0);
-      el.style.transition = `opacity ${duration}ms ${ease} ${delay}ms, transform ${duration}ms ${ease} ${delay}ms, filter ${duration}ms ease-out ${delay}ms`;
-      el.style.opacity = '1';
-      el.style.transform = 'translate(0,0)';
-      el.style.filter = 'blur(0)';
-    }
-
-    document.querySelectorAll('[data-reveal]:not([data-scope])').forEach(revealElement);
-
-    function scopedReveal(scope) {
-      document.querySelectorAll(`[data-scope="${scope}"][data-reveal]`).forEach(revealElement);
-    }
-
-    const analyticsObs = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        scopedReveal('analytics');
-        countUp(document.getElementById('countMain'), 100, 14250, 1200);
-        countUp(document.getElementById('countSmall'), 10, 925, 1200);
-        analyticsObs.disconnect();
-      }
-    }, { rootMargin: '-100px' });
-    analyticsObs.observe(document.getElementById('analyticsTrigger'));
-
-    const aiObs = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        scopedReveal('ai');
-        animateChart();
-        animateTree();
-        aiObs.disconnect();
-      }
-    }, { rootMargin: '-100px' });
-    aiObs.observe(document.getElementById('aiTrigger'));
-
-    function countUp(el, from, to, duration) {
-      const start = performance.now();
-      function tick(now) {
-        const t = Math.min(1, (now - start) / duration);
-        const eased = 1 - Math.pow(1 - t, 3);
-        const value = from + (to - from) * eased;
-        el.textContent = '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        if (t < 1) requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-    }
-
-    const marquee = document.getElementById('marquee');
-    marquee.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }], { duration: 14000, iterations: Infinity, easing: 'linear' });
-
-    const storyCard = document.getElementById('storyCard');
-    let rx = 0, ry = 0, tx = 0, ty = 0;
-    window.addEventListener('mousemove', (e) => {
-      const nx = (e.clientX / window.innerWidth) * 2 - 1;
-      const ny = (e.clientY / window.innerHeight) * 2 - 1;
-      tx = nx * 18;
-      ty = ny * -12;
-    });
-    function tilt() {
-      rx += (ty - rx) * 0.08;
-      ry += (tx - ry) * 0.08;
-      storyCard.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
-      requestAnimationFrame(tilt);
-    }
-    setTimeout(tilt, 900);
-
-    function storyBars() {
-      const b1 = document.getElementById('storyBar1');
-      const b2 = document.getElementById('storyBar2');
-      b1.getAnimations().forEach(a => a.cancel());
-      b2.getAnimations().forEach(a => a.cancel());
-      b1.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)', offset: .5 }, { transform: 'scaleX(1)' }], { duration: 6000, iterations: Infinity, easing: 'linear' });
-      b2.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(0)', offset: .5 }, { transform: 'scaleX(1)' }], { duration: 6000, iterations: Infinity, easing: 'linear' });
-    }
-    storyBars();
-
-    const headline = document.getElementById('storyHeadline');
-    let storySlide = 0;
-    function setStorySlide(n) {
-      storySlide = n;
-      headline.style.transition = 'opacity 250ms ease, transform 250ms ease, filter 250ms ease';
-      headline.style.opacity = '0';
-      headline.style.transform = 'translateY(12px)';
-      headline.style.filter = 'blur(6px)';
-      setTimeout(() => {
-        headline.innerHTML = n === 0
-          ? '<span class="font-semibold">Resolving</span><br><span style="font-family:\'Instrument Serif\',serif;font-style:italic;">returns faster</span>'
-          : '<span class="font-semibold">Approving</span><br><span style="font-family:\'Instrument Serif\',serif;font-style:italic;">refund cases</span>';
-        headline.style.opacity = '1';
-        headline.style.transform = 'translateY(0)';
-        headline.style.filter = 'blur(0)';
-      }, 260);
-    }
-    setTimeout(() => setStorySlide(1), 3000);
-    setInterval(() => {
-      setStorySlide(0);
-      setTimeout(() => setStorySlide(1), 3000);
-    }, 6000);
-
-    const questions = [
-      {
-        q: '这个食品礼盒包装破损，可以直接退款吗？',
-        a: '已读取订单 3000029、食品生鲜售后政策和图片凭证。建议仅退款 127.84 元，并保留证据记录用于后续核验。'
-      },
-      {
-        q: '这个 MacBook 功能异常，需要人工复核吗？',
-        a: '订单 3000012 属于高价值 3C 商品，缺少检测凭证，建议转人工复核并补充图片或物流截图。'
-      },
-      {
-        q: '用户说“可以”，系统应该怎么继续？',
-        a: '系统会读取上一轮对话和当前决策状态，把“可以”识别为确认提交退款，而不是重新询问用户是谁。'
-      }
-    ];
-    let qi = 0;
-    const qaBlock = document.getElementById('qaBlock');
-    setInterval(() => {
-      qi = (qi + 1) % questions.length;
-      qaBlock.style.transition = `opacity 600ms ${ease}, transform 600ms ${ease}, filter 600ms ${ease}`;
-      qaBlock.style.opacity = '0';
-      qaBlock.style.transform = 'translateY(-6px)';
-      qaBlock.style.filter = 'blur(8px)';
-      setTimeout(() => {
-        document.getElementById('qaQuestion').textContent = questions[qi].q;
-        document.getElementById('qaAnswer').textContent = questions[qi].a;
-        qaBlock.style.opacity = '1';
-        qaBlock.style.transform = 'translateY(0)';
-        qaBlock.style.filter = 'blur(0)';
-      }, 650);
-    }, 4000);
-
-    function animateChart() {
-      const rect = document.getElementById('chartReveal');
-      const start = performance.now() + 300;
-      function frame(now) {
-        const t = Math.max(0, Math.min(1, (now - start) / 1400));
-        const eased = 1 - Math.pow(1 - t, 3);
-        rect.setAttribute('width', 220 * eased);
-        if (t < 1) requestAnimationFrame(frame);
-      }
-      requestAnimationFrame(frame);
-      setTimeout(() => {
-        const line = document.getElementById('greenConnector');
-        line.style.transition = 'stroke-dashoffset 500ms ease-out';
-        line.style.strokeDashoffset = '0';
-      }, 1400);
-      setTimeout(() => {
-        const dot = document.getElementById('greenDot');
-        dot.style.transition = 'transform 300ms ease-out';
-        dot.style.transform = 'scale(1)';
-      }, 1700);
-    }
-
-    function animateTree() {
-      document.querySelectorAll('.tree-node').forEach((node) => {
-        const delay = Number(node.dataset.delay || 0) + 450;
-        node.style.transition = `opacity 450ms ease-out ${delay}ms, transform 450ms ease-out ${delay}ms`;
-        node.style.opacity = '1';
-        node.style.transform = 'scale(1)';
-      });
-      document.querySelectorAll('.tree-line').forEach((line) => {
-        line.style.transition = 'opacity 700ms ease-out 700ms';
-        line.style.opacity = '1';
-      });
-    }
-  </script>
-
-</body></html>
+  <div class="sparkle"></div>
+</body>
+</html>
