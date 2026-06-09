@@ -205,8 +205,8 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 260px 190px minmax(420px, 1fr) 200px 260px;
-      gap: 16px;
+      grid-template-columns: 280px minmax(680px, 1fr) 300px;
+      gap: 18px;
       align-items: start;
     }
 
@@ -363,15 +363,15 @@
     }
 
     .chat-shell {
-      min-height: 660px;
+      min-height: 720px;
       display: block;
       overflow: hidden;
     }
 
     .chat-sidebar,
     .agent-menu {
-      min-height: 660px;
-      padding: 18px;
+      min-height: auto;
+      padding: 16px;
       background: var(--panel);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
@@ -455,7 +455,7 @@
     }
 
     .chat-main {
-      min-height: 660px;
+      min-height: 720px;
       display: grid;
       grid-template-rows: auto 1fr auto;
       padding: 20px 24px;
@@ -488,8 +488,12 @@
     .messages {
       display: flex;
       flex-direction: column;
-      gap: 22px;
-      padding: 28px 0;
+      gap: 18px;
+      padding: 24px 2px;
+      overflow-y: auto;
+      min-height: 0;
+      max-height: 540px;
+      scrollbar-width: thin;
     }
 
     .message {
@@ -685,12 +689,7 @@
 
     @media (max-width: 1320px) {
       .grid {
-        grid-template-columns: 260px minmax(520px, 1fr) 280px;
-      }
-
-      .chat-sidebar,
-      .agent-menu {
-        display: none;
+        grid-template-columns: 260px minmax(560px, 1fr) 280px;
       }
     }
 
@@ -802,9 +801,7 @@
             </div>
           </div>
         </section>
-      </aside>
-
-      <aside class="glass chat-sidebar">
+      <section class="glass panel chat-sidebar">
           <h3 class="context-title">Context</h3>
           <div class="profile">
             <div class="avatar">AI</div>
@@ -819,7 +816,8 @@
             <button><span>物流查询</span><iconify-icon icon="solar:delivery-linear"></iconify-icon></button>
             <button><span>退款进度</span><iconify-icon icon="solar:card-transfer-linear"></iconify-icon></button>
           </div>
-          <button class="support-button" style="margin-top:190px;background:rgba(255,255,255,0.12);color:#fff;">Talk to AI</button>
+          <button class="support-button context-talk" style="background:rgba(255,255,255,0.12);color:#fff;">Talk to AI</button>
+        </section>
       </aside>
 
       <section class="glass chat-shell">
@@ -866,18 +864,6 @@
         </section>
       </section>
 
-      <aside class="glass agent-menu">
-          <h3 class="agent-title">AI-Agent</h3>
-          <p>AI-Agent 会根据订单、政策和凭证，推荐下一步处理方式：</p>
-          <div class="suggestion-list">
-            <button class="suggestion active"><span><iconify-icon icon="solar:dollar-minimalistic-linear"></iconify-icon>极速退款</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
-            <button class="suggestion"><span><iconify-icon icon="solar:add-circle-linear"></iconify-icon>换货申请</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
-            <button class="suggestion"><span><iconify-icon icon="solar:repeat-one-linear"></iconify-icon>退货退款</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
-            <button class="suggestion"><span><iconify-icon icon="solar:chat-round-dots-linear"></iconify-icon>商品咨询</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
-            <button class="suggestion"><span><iconify-icon icon="solar:clipboard-list-linear"></iconify-icon>订单状态</span><iconify-icon icon="solar:alt-arrow-down-linear"></iconify-icon></button>
-          </div>
-      </aside>
-
       <aside class="stack">
         <section class="glass panel">
           <div class="panel-head">
@@ -889,6 +875,18 @@
             <button class="suggestion"><span>Replacement Application</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
             <button class="suggestion"><span>Product Consulting</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
             <button class="suggestion"><span>Order Status</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+          </div>
+        </section>
+
+      <section class="glass panel agent-menu">
+          <h3 class="agent-title">AI-Agent</h3>
+          <p>AI-Agent 会根据订单、政策和凭证，推荐下一步处理方式：</p>
+          <div class="suggestion-list">
+            <button class="suggestion active"><span><iconify-icon icon="solar:dollar-minimalistic-linear"></iconify-icon>极速退款</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span><iconify-icon icon="solar:add-circle-linear"></iconify-icon>换货申请</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span><iconify-icon icon="solar:repeat-one-linear"></iconify-icon>退货退款</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span><iconify-icon icon="solar:chat-round-dots-linear"></iconify-icon>商品咨询</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
+            <button class="suggestion"><span><iconify-icon icon="solar:clipboard-list-linear"></iconify-icon>订单状态</span><iconify-icon icon="solar:alt-arrow-down-linear"></iconify-icon></button>
           </div>
         </section>
 
@@ -917,6 +915,150 @@
     </section>
   </main>
   </div>
+
+
+  <script>
+    (() => {
+      const messages = document.querySelector('.messages');
+      const input = document.querySelector('.input-row input');
+      const sendButton = document.querySelector('.input-row .send');
+
+      if (!messages || !input || !sendButton) return;
+
+      const scrollChat = () => {
+        messages.scrollTop = messages.scrollHeight;
+      };
+
+      const clean = (value) => (value || '').replace(/\s+/g, ' ').trim();
+
+      const addMessage = (role, text) => {
+        const article = document.createElement('article');
+        article.className = role === 'user' ? 'message user' : 'message';
+        if (role !== 'user') {
+          const icon = document.createElement('div');
+          icon.className = 'bot-icon';
+          icon.innerHTML = '<iconify-icon icon="solar:stars-bold" style="font-size:24px;"></iconify-icon>';
+          article.appendChild(icon);
+        }
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = text;
+        article.appendChild(bubble);
+        messages.appendChild(article);
+        scrollChat();
+      };
+
+      const replyFor = (raw) => {
+        const text = clean(raw);
+        const lower = text.toLowerCase();
+        if (/退款|refund|极速/.test(text) || lower.includes('refund')) {
+          return '可以，我已读取订单 23300029、签收状态和历史售后记录。当前建议先按“商品与描述不符/外观划痕”发起退款申请，系统会保留凭证入口；如果补充照片后确认质量问题，可优先走快速退款。';
+        }
+        if (/换货|replacement|更换/.test(text) || lower.includes('replacement')) {
+          return '可以申请换货。我会先检查库存、物流签收和售后时效：如果商品外观划痕属实，建议选择“换货申请”，平台会生成换货单并同步物流取件信息。';
+        }
+        if (/订单|状态|order/.test(text) || lower.includes('order')) {
+          return '当前订单 23300029 已签收，仍在售后可申请期内。售后进度为：提交申请 -> 平台审核 -> 退款/换货处理中 -> 完成。';
+        }
+        if (/物流|快递|tracking/.test(text) || lower.includes('tracking')) {
+          return '物流显示已签收。如果您反馈外包装破损，我建议上传外箱、商品划痕和快递面单照片，这样可以把责任链路和处理依据留完整。';
+        }
+        if (/人工|客服|support|advisor/.test(text) || lower.includes('support')) {
+          return '我已为您生成转人工摘要：订单号、问题描述、当前建议方案和所需凭证都会一起带给人工客服，您不用重复说明。';
+        }
+        if (/图片|照片|凭证|upload/.test(text) || lower.includes('image')) {
+          return '您可以上传商品划痕、外包装、快递面单三类图片。我会结合订单和政策判断更适合退款、换货还是补偿。';
+        }
+        if (/你好|hello|hi|在吗|可以|好的/.test(text) || lower === 'hi') {
+          return '我在。您可以直接说遇到的售后问题，比如商品破损、描述不符、想退款、想换货或查询订单状态，我会结合当前订单继续判断。';
+        }
+        return '收到。我会把这句话作为本次售后会话的上下文继续判断。为了更快处理，您可以补充：商品是否影响使用、是否有照片凭证、希望退款还是换货。';
+      };
+
+      const sendText = (text) => {
+        const value = clean(text || input.value);
+        if (!value) return;
+        addMessage('user', value);
+        input.value = '';
+        window.setTimeout(() => addMessage('ai', replyFor(value)), 260);
+      };
+
+      sendButton.addEventListener('click', () => sendText());
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          sendText();
+        }
+      });
+
+      document.querySelectorAll('.quick-replies button').forEach((button) => {
+        button.addEventListener('click', () => sendText(clean(button.textContent)));
+      });
+
+      document.querySelectorAll('.suggestion').forEach((button) => {
+        button.addEventListener('click', () => {
+          const group = button.closest('.suggestion-list');
+          group?.querySelectorAll('.suggestion').forEach((item) => item.classList.remove('active'));
+          button.classList.add('active');
+          sendText(clean(button.textContent));
+        });
+      });
+
+      document.querySelectorAll('.side-tabs button').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.side-tabs button').forEach((item) => item.classList.remove('active'));
+          button.classList.add('active');
+          sendText(clean(button.textContent));
+        });
+      });
+
+      const articleSets = {
+        Recommended: ['如何上传有效的商品破损照片', '七天无理由退货和特殊品类说明', '换货申请审核需要多久', '联系人工客服前需要准备什么'],
+        Articles: ['退款金额为什么会扣除运费', '商品描述不符如何举证', '食品/电器类售后政策差异', '平台审核失败后如何补充材料'],
+        Human: ['转人工前自动生成问题摘要', '人工客服工作时间 09:00-22:00', '复杂售后将保留 AI 判断依据', '紧急问题优先处理高价值用户']
+      };
+
+      const articleList = document.querySelector('.article-list');
+      document.querySelectorAll('.tabs button').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll('.tabs button').forEach((item) => item.classList.remove('active'));
+          button.classList.add('active');
+          const items = articleSets[clean(button.textContent)] || articleSets.Recommended;
+          if (articleList) {
+            articleList.innerHTML = items.map((item) => `<li><a href="#">${item}</a></li>`).join('');
+          }
+        });
+      });
+
+      document.addEventListener('click', (event) => {
+        const target = event.target.closest('a, button');
+        if (!target) return;
+        const label = clean(target.textContent);
+        if (target.matches('.article-list a')) {
+          event.preventDefault();
+          addMessage('ai', `已打开帮助主题：“${label}”。结论会同步到本次售后上下文里，方便后续继续处理。`);
+        }
+        if (target.matches('.support-button')) {
+          event.preventDefault();
+          addMessage('ai', '已进入人工客服准备流程：我会把订单、售后问题、AI 建议方案和聊天摘要一起带过去。');
+        }
+        if (target.matches('.nav-links a')) {
+          event.preventDefault();
+          addMessage('ai', `已切换到 ${label} 相关服务入口。当前演示版会继续保留在售后工作台内处理。`);
+        }
+        if (target.matches('.nav-actions a')) {
+          event.preventDefault();
+          window.location.href = '/';
+        }
+        if (target.matches('.nav-actions .white-pill')) {
+          event.preventDefault();
+          addMessage('ai', '已为您查找售后顾问。当前可以先由 AI 完成初审，需要人工时我会生成转接摘要。');
+        }
+      });
+
+      scrollChat();
+    })();
+  </script>
 
   <script>
     (() => {
