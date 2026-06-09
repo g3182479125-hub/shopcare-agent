@@ -85,7 +85,7 @@
       width: min(1440px, 100%);
       min-height: 100vh;
       margin: 0 auto;
-      padding: 22px 28px 34px;
+      padding: 22px 20px 34px;
     }
 
     .nav {
@@ -205,8 +205,8 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 280px minmax(560px, 1fr) 300px;
-      gap: 24px;
+      grid-template-columns: 260px 190px minmax(420px, 1fr) 200px 260px;
+      gap: 16px;
       align-items: start;
     }
 
@@ -221,11 +221,11 @@
 
     .stack {
       display: grid;
-      gap: 20px;
+      gap: 16px;
     }
 
     .panel {
-      padding: 18px;
+      padding: 16px;
     }
 
     .panel-head {
@@ -269,14 +269,14 @@
 
     .product {
       display: grid;
-      grid-template-columns: 82px 1fr;
-      gap: 14px;
+      grid-template-columns: 72px 1fr;
+      gap: 12px;
       align-items: center;
     }
 
     .thumb {
-      width: 82px;
-      height: 82px;
+      width: 72px;
+      height: 72px;
       display: grid;
       place-items: center;
       border: 1px solid rgba(255, 255, 255, 0.08);
@@ -364,21 +364,17 @@
 
     .chat-shell {
       min-height: 660px;
-      display: grid;
-      grid-template-columns: 210px 1fr 220px;
+      display: block;
       overflow: hidden;
     }
 
     .chat-sidebar,
     .agent-menu {
-      padding: 20px;
-      border-right: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.025);
-    }
-
-    .agent-menu {
-      border-right: 0;
-      border-left: 1px solid var(--border);
+      min-height: 660px;
+      padding: 18px;
+      background: var(--panel);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
     }
 
     .context-title,
@@ -462,7 +458,7 @@
       min-height: 660px;
       display: grid;
       grid-template-rows: auto 1fr auto;
-      padding: 18px 22px;
+      padding: 20px 24px;
     }
 
     .chat-top {
@@ -687,48 +683,20 @@
       clip-path: polygon(0 78%, 14% 70%, 30% 74%, 46% 52%, 62% 59%, 76% 32%, 100% 36%, 100% 100%, 0 100%);
     }
 
-    .sparkle {
-      position: fixed;
-      right: 22px;
-      bottom: 58px;
-      width: 86px;
-      height: 86px;
-      pointer-events: none;
-      opacity: 0.86;
-      filter: drop-shadow(0 0 28px rgba(255, 255, 255, 0.24));
+    @media (max-width: 1320px) {
+      .grid {
+        grid-template-columns: 260px minmax(520px, 1fr) 280px;
+      }
+
+      .chat-sidebar,
+      .agent-menu {
+        display: none;
+      }
     }
 
-    .sparkle::before,
-    .sparkle::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      margin: auto;
-      background: rgba(255, 255, 255, 0.9);
-      clip-path: polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%);
-    }
-
-    .sparkle::after {
-      width: 38px;
-      height: 38px;
-      left: -42px;
-      top: -30px;
-      opacity: 0.6;
-    }
-
-    @media (max-width: 1180px) {
+    @media (max-width: 980px) {
       .grid {
         grid-template-columns: 1fr;
-      }
-
-      .chat-shell {
-        grid-template-columns: 200px 1fr;
-      }
-
-      .agent-menu {
-        grid-column: 1 / -1;
-        border-left: 0;
-        border-top: 1px solid var(--border);
       }
     }
   </style>
@@ -807,8 +775,7 @@
         </section>
       </aside>
 
-      <section class="glass chat-shell">
-        <aside class="chat-sidebar">
+      <aside class="glass chat-sidebar">
           <h3 class="context-title">Context</h3>
           <div class="profile">
             <div class="avatar">AI</div>
@@ -824,8 +791,9 @@
             <button><span>退款进度</span><iconify-icon icon="solar:card-transfer-linear"></iconify-icon></button>
           </div>
           <button class="support-button" style="margin-top:190px;background:rgba(255,255,255,0.12);color:#fff;">Talk to AI</button>
-        </aside>
+      </aside>
 
+      <section class="glass chat-shell">
         <section class="chat-main">
           <div class="chat-top">
             <h2>售后咨询对话</h2>
@@ -867,8 +835,9 @@
             </div>
           </div>
         </section>
+      </section>
 
-        <aside class="agent-menu">
+      <aside class="glass agent-menu">
           <h3 class="agent-title">AI-Agent</h3>
           <p>AI-Agent 会根据订单、政策和凭证，推荐下一步处理方式：</p>
           <div class="suggestion-list">
@@ -878,8 +847,7 @@
             <button class="suggestion"><span><iconify-icon icon="solar:chat-round-dots-linear"></iconify-icon>商品咨询</span><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>
             <button class="suggestion"><span><iconify-icon icon="solar:clipboard-list-linear"></iconify-icon>订单状态</span><iconify-icon icon="solar:alt-arrow-down-linear"></iconify-icon></button>
           </div>
-        </aside>
-      </section>
+      </aside>
 
       <aside class="stack">
         <section class="glass panel">
@@ -919,6 +887,5 @@
       </aside>
     </section>
   </main>
-  <div class="sparkle"></div>
 </body>
 </html>
