@@ -214,7 +214,10 @@ function historyFromMessages(items: ChatMessage[]): ConversationHistoryItem[] {
 }
 
 export default function App() {
-  const [showLogin, setShowLogin] = useState(true)
+  const [showLogin, setShowLogin] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return new URLSearchParams(window.location.search).get('app') !== '1'
+  })
   const [sessionId] = useState(createSessionId)
   const [activeNav, setActiveNav] = useState('support')
   const [orderId, setOrderId] = useState(DEFAULT_ORDER)
