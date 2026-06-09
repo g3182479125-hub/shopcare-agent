@@ -759,6 +759,367 @@
       clip-path: polygon(0 78%, 14% 70%, 30% 74%, 46% 52%, 62% 59%, 76% 32%, 100% 36%, 100% 100%, 0 100%);
     }
 
+    .role-view,
+    .merchant-view {
+      min-height: 100vh;
+      color: var(--text);
+      background: transparent;
+    }
+
+    .role-view[hidden],
+    .merchant-view[hidden] {
+      display: none;
+    }
+
+    .role-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+    }
+
+    .role-panel {
+      width: min(1080px, 100%);
+    }
+
+    .role-eyebrow,
+    .merchant-eyebrow {
+      color: rgba(255, 255, 255, 0.56);
+      font-size: 13px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .role-title {
+      max-width: 760px;
+      margin: 18px 0 18px;
+      font-size: clamp(46px, 6vw, 92px);
+      line-height: 0.94;
+      font-weight: 500;
+      letter-spacing: -0.07em;
+    }
+
+    .role-copy {
+      max-width: 620px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .role-cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
+      margin-top: 42px;
+    }
+
+    .role-card {
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: space-between;
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      background: rgba(22, 27, 34, 0.58);
+      color: var(--text);
+      padding: 28px;
+      text-align: left;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .role-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, 0.22);
+      background: rgba(35, 42, 52, 0.72);
+    }
+
+    .role-icon {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .role-card h2 {
+      margin: 26px 0 10px;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 500;
+      letter-spacing: -0.05em;
+    }
+
+    .role-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .role-card span:last-child {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 28px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #101418;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .merchant-page {
+      width: min(1720px, calc(100% - 32px));
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .merchant-topbar {
+      display: grid;
+      grid-template-columns: 240px 1fr auto;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 30px;
+    }
+
+    .merchant-topbar h1 {
+      justify-self: center;
+      margin: 0;
+      font-size: clamp(28px, 4vw, 54px);
+      line-height: 1;
+      font-weight: 500;
+      letter-spacing: -0.065em;
+    }
+
+    .merchant-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .ghost-button {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.82);
+      padding: 10px 14px;
+    }
+
+    .merchant-grid {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr) 360px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .merchant-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .merchant-card {
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: rgba(22, 27, 34, 0.62);
+      padding: 18px;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+
+    .merchant-card h2,
+    .merchant-card h3 {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: -0.035em;
+    }
+
+    .merchant-card p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .metric-card {
+      min-height: 134px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.055);
+      padding: 16px;
+    }
+
+    .metric-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .metric-card strong {
+      display: block;
+      margin-top: 12px;
+      color: rgba(255, 255, 255, 0.95);
+      font-size: clamp(24px, 3vw, 38px);
+      line-height: 0.95;
+      font-weight: 500;
+      letter-spacing: -0.055em;
+    }
+
+    .merchant-bars {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(86px, 150px) 1fr auto;
+      align-items: center;
+      gap: 10px;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 13px;
+    }
+
+    .bar-track {
+      display: block;
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .bar-fill {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(134, 239, 172, 0.72), rgba(185, 216, 255, 0.72));
+    }
+
+    .trend-panel {
+      min-height: 260px;
+    }
+
+    .trend-chart {
+      height: 190px;
+      display: flex;
+      align-items: end;
+      gap: 8px;
+      margin-top: 22px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .trend-bar {
+      flex: 1;
+      min-width: 0;
+      border-radius: 999px 999px 4px 4px;
+      background: linear-gradient(180deg, rgba(134, 239, 172, 0.8), rgba(134, 239, 172, 0.16));
+    }
+
+    .merchant-agent {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .insight-card {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.055);
+      padding: 14px;
+    }
+
+    .insight-card strong {
+      display: block;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+    }
+
+    .insight-card b {
+      display: inline-flex;
+      margin-top: 12px;
+      border-radius: 999px;
+      background: rgba(134, 239, 172, 0.14);
+      color: var(--green);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .merchant-chat {
+      min-height: 360px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .merchant-messages {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      margin-top: 16px;
+      padding-right: 4px;
+      overflow-y: auto;
+    }
+
+    .merchant-message {
+      max-width: 88%;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.07);
+      padding: 12px 14px;
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .merchant-message.user {
+      justify-self: end;
+      background: rgba(134, 239, 172, 0.12);
+    }
+
+    .merchant-input {
+      display: grid;
+      grid-template-columns: 1fr 42px;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .merchant-input input {
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      padding: 0 16px;
+    }
+
+    .merchant-input button {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #101418;
+    }
+
     @media (max-width: 1320px) {
       .grid {
         grid-template-columns: 260px minmax(620px, 1fr) 280px;
@@ -770,6 +1131,20 @@
     }
 
     @media (max-width: 980px) {
+      .role-cards,
+      .merchant-grid,
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .merchant-topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .merchant-topbar h1 {
+        justify-self: start;
+      }
+
       .page {
         height: auto;
         max-height: none;
@@ -831,6 +1206,33 @@
 </head>
 <body class="show-landing">
   <iframe id="landingFrame" class="landing-frame" src="/landing.html" title="ShopCare landing"></iframe>
+  <div id="roleGateway" class="role-view" hidden>
+    <main class="role-screen">
+      <section class="role-panel">
+        <span class="role-eyebrow">Choose Workspace</span>
+        <h1 class="role-title">你想进入哪一侧工作台？</h1>
+        <p class="role-copy">安心购现在分成两条链路：消费者处理售后，商家查看经营与售后数据。先选身份，系统会把你带到对应的 Agent 页面。</p>
+        <div class="role-cards">
+          <button class="role-card" type="button" data-login-role="user">
+            <span class="role-icon"><iconify-icon icon="solar:chat-round-like-bold-duotone" style="font-size:32px;"></iconify-icon></span>
+            <span>
+              <h2>用户登录</h2>
+              <p>进入售后客服中心，继续处理退款、换货、物流异常、图片凭证和人工转接。</p>
+            </span>
+            <span>进入售后咨询 <iconify-icon icon="solar:arrow-right-up-linear"></iconify-icon></span>
+          </button>
+          <button class="role-card" type="button" data-login-role="merchant">
+            <span class="role-icon"><iconify-icon icon="solar:chart-2-bold-duotone" style="font-size:32px;"></iconify-icon></span>
+            <span>
+              <h2>商家登录</h2>
+              <p>进入经营分析 Agent，看订单、GMV、类目、用户、履约和增长建议。</p>
+            </span>
+            <span>进入数据分析 <iconify-icon icon="solar:arrow-right-up-linear"></iconify-icon></span>
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
   <div id="serviceApp" class="service-view" hidden>
   <main class="page">
     <nav class="nav">
@@ -1022,6 +1424,89 @@
   </main>
   </div>
 
+  <div id="merchantApp" class="merchant-view" hidden>
+    <main class="merchant-page">
+      <nav class="merchant-topbar">
+        <a class="brand" href="#">
+          <span class="brand-mark"><i></i><i></i><i></i><i></i></span>
+          <span>ShopCare Merchant</span>
+        </a>
+        <h1>商家数据分析 Agent</h1>
+        <div class="merchant-actions">
+          <button class="ghost-button" type="button" data-open-login>切换身份</button>
+          <button class="white-pill" type="button" data-open-service>用户端预览</button>
+        </div>
+      </nav>
+
+      <section class="merchant-grid">
+        <aside class="merchant-stack">
+          <section class="merchant-card">
+            <span class="merchant-eyebrow">Business Health</span>
+            <h2>经营健康度</h2>
+            <div class="merchant-bars" id="merchantHealthBars"></div>
+          </section>
+          <section class="merchant-card">
+            <h2>用户分层</h2>
+            <p>按全年消费金额和购买次数自动分层，用来判断复购和会员运营优先级。</p>
+            <div class="merchant-bars" id="merchantTiers"></div>
+          </section>
+          <section class="merchant-card">
+            <h2>注册渠道</h2>
+            <div class="merchant-bars" id="merchantChannels"></div>
+          </section>
+        </aside>
+
+        <section>
+          <div class="metric-grid" id="merchantMetrics"></div>
+          <section class="merchant-card trend-panel">
+            <div class="panel-head">
+              <h2>全年 GMV 趋势</h2>
+              <span class="context-pill">真实订单数据</span>
+            </div>
+            <p id="merchantTrendCopy">正在读取全年订单数据...</p>
+            <div class="trend-chart" id="merchantTrend"></div>
+          </section>
+          <section class="merchant-card" style="margin-top:16px;">
+            <div class="panel-head">
+              <h2>类目经营表现</h2>
+              <span class="context-pill">GMV / 客单价 / 履约</span>
+            </div>
+            <div class="merchant-bars" id="merchantCategories"></div>
+          </section>
+          <section class="merchant-card" style="margin-top:16px;">
+            <div class="panel-head">
+              <h2>品牌与城市机会</h2>
+              <span class="context-pill">投放参考</span>
+            </div>
+            <div class="merchant-bars" id="merchantBrands"></div>
+            <div class="merchant-bars" id="merchantCities" style="margin-top:18px;"></div>
+          </section>
+        </section>
+
+        <aside class="merchant-stack">
+          <section class="merchant-card">
+            <div class="panel-head">
+              <h2>Agent 建议</h2>
+              <span class="context-pill">可执行</span>
+            </div>
+            <div class="merchant-agent" id="merchantInsights"></div>
+          </section>
+          <section class="merchant-card merchant-chat">
+            <div>
+              <h2>经营分析对话</h2>
+              <p>可以问：下周怎么做增长、哪个类目该补货、怎么降低售后压力。</p>
+            </div>
+            <div class="merchant-messages" id="merchantMessages"></div>
+            <div class="merchant-input">
+              <input id="merchantInput" placeholder="问问商家数据分析 Agent..." />
+              <button id="merchantSend" type="button"><iconify-icon icon="solar:arrow-right-up-linear"></iconify-icon></button>
+            </div>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </div>
+
 
   <script>
     (() => {
@@ -1040,6 +1525,20 @@
 
       const clean = (value) => (value || '').replace(/\s+/g, ' ').trim();
 
+      const withEmoji = (value) => {
+        const text = clean(value);
+        if (!text) return text;
+        const emojiSet = ['💸', '🔁', '📷', '👩‍💻', '🚚', '✨', '😊'];
+        if (emojiSet.some((emoji) => text.includes(emoji))) return text;
+        if (/退款|退钱|金额|到账|refund/i.test(text)) return `${text} 💸`;
+        if (/换货|补发|replacement/i.test(text)) return `${text} 🔁`;
+        if (/图片|照片|凭证|拍|上传|image/i.test(text)) return `${text} 📷`;
+        if (/人工|客服|转接|support/i.test(text)) return `${text} 👩‍💻`;
+        if (/物流|快递|派送|tracking/i.test(text)) return `${text} 🚚`;
+        if (/谢谢|不客气|好的/.test(text)) return `${text} 😊`;
+        return `${text} ✨`;
+      };
+
       const addMessage = (role, text) => {
         const article = document.createElement('article');
         article.className = role === 'user' ? 'message user' : 'message';
@@ -1051,7 +1550,7 @@
         }
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        bubble.textContent = text;
+        bubble.textContent = role === 'user' ? text : withEmoji(text);
         article.appendChild(bubble);
         messages.appendChild(article);
         scrollChat();
@@ -1292,7 +1791,7 @@
         }
         if (target.matches('.nav-actions a')) {
           event.preventDefault();
-          window.location.href = '/';
+          window.location.href = '/?view=login';
         }
         if (target.matches('.nav-actions .white-pill')) {
           event.preventDefault();
@@ -1306,25 +1805,215 @@
 
   <script>
     (() => {
+      const formatNumber = (value) => Number(value || 0).toLocaleString('zh-CN');
+      const formatMoney = (value) => {
+        const num = Number(value || 0);
+        if (num >= 100000000) return `${(num / 100000000).toFixed(2)}亿`;
+        if (num >= 10000) return `${(num / 10000).toFixed(1)}万`;
+        return num.toFixed(0);
+      };
+      const percent = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`;
+      const clean = (value) => (value || '').replace(/\s+/g, ' ').trim();
+
+      let merchantData = null;
+
+      const renderBars = (id, rows, options = {}) => {
+        const target = document.getElementById(id);
+        if (!target || !rows?.length) return;
+        const valueKey = options.valueKey || 'value';
+        const labelKey = options.labelKey || 'name';
+        const suffix = options.suffix || '';
+        const formatter = options.formatter || ((value) => formatNumber(value));
+        const max = Math.max(...rows.map((row) => Number(row[valueKey] || 0)), 1);
+        target.innerHTML = rows.map((row) => {
+          const value = Number(row[valueKey] || 0);
+          const width = Math.max(4, (value / max) * 100);
+          return `<div class="bar-row"><span>${row[labelKey]}</span><i class="bar-track"><em class="bar-fill" style="width:${width}%"></em></i><b>${formatter(value)}${suffix}</b></div>`;
+        }).join('');
+      };
+
+      const addMerchantMessage = (role, text) => {
+        const target = document.getElementById('merchantMessages');
+        if (!target) return;
+        const message = document.createElement('div');
+        message.className = role === 'user' ? 'merchant-message user' : 'merchant-message';
+        message.textContent = role === 'user' ? text : `${text} 📊`;
+        target.appendChild(message);
+        target.scrollTop = target.scrollHeight;
+      };
+
+      const merchantAnswer = (question) => {
+        if (!merchantData) return '数据还在加载，等我一下再问。';
+        const q = clean(question);
+        const topCategory = merchantData.categories?.[0];
+        const slowCategory = [...(merchantData.categories || [])].sort((a, b) => b.avg_fulfillment - a.avg_fulfillment)[0];
+        const topCity = merchantData.cities?.[0];
+        if (/增长|下周|怎么做|建议|动作/.test(q)) {
+          return `下周建议先抓三件事：主推 ${topCategory?.name || '高 GMV 类目'}，给高价值用户发复购券，同时把 ${slowCategory?.name || '慢履约类目'} 的履约时效压下来。`;
+        }
+        if (/类目|品类|卖得好/.test(q)) {
+          return `${topCategory?.name || '当前头部类目'} 是当前主力盘，GMV ${formatMoney(topCategory?.gmv)}，客单价 ${topCategory?.aov || '-'}。资源位可以优先给它。`;
+        }
+        if (/履约|物流|慢|时效/.test(q)) {
+          return `${slowCategory?.name || '部分类目'} 履约偏慢，平均 ${slowCategory?.avg_fulfillment || '-'} 小时。建议单独做发货预警，超过阈值就提前干预。`;
+        }
+        if (/用户|会员|复购|人群/.test(q)) {
+          return `全年用户 ${formatNumber(merchantData.overview.users)}，平均购买 ${merchantData.overview.avg_purchase_frequency} 次。优先运营 VIP 和 HighValue 用户，比泛投放更划算。`;
+        }
+        if (/城市|地区|投放/.test(q)) {
+          return `${topCity?.name || '头部城市'} GMV 最高，适合做区域投放和仓配优先级配置。`;
+        }
+        if (/售后|退款|客服/.test(q)) {
+          return `售后压力通常和履约、商品描述、图片凭证有关。建议把慢履约类目和高客单类目放进重点监控。`;
+        }
+        return merchantData.agent_replies?.[0] || '我会先看 GMV、客单价、履约和用户分层，再给你经营动作。';
+      };
+
+      const renderMerchant = (data) => {
+        merchantData = data;
+        const overview = data.overview || {};
+        const metrics = [
+          ['全年 GMV', formatMoney(overview.gmv), '来自 38 万订单'],
+          ['订单数', formatNumber(overview.orders), `客单价 ${formatMoney(overview.aov)}`],
+          ['用户数', formatNumber(overview.users), `买家 ${formatNumber(overview.buyers)}`],
+          ['平均履约', `${overview.avg_fulfillment_hours}h`, `加购率 ${percent(overview.cart_rate)}`],
+        ];
+        const metricTarget = document.getElementById('merchantMetrics');
+        if (metricTarget) {
+          metricTarget.innerHTML = metrics.map(([label, value, sub]) => `<article class="metric-card"><span>${label}</span><strong>${value}</strong><p>${sub}</p></article>`).join('');
+        }
+
+        renderBars('merchantHealthBars', [
+          { name: '热品 GMV 占比', value: overview.hot_product_gmv_share, formatter: percent },
+          { name: '加购率', value: overview.cart_rate, formatter: percent },
+          { name: '复购频次', value: overview.avg_purchase_frequency / 10, formatter: percent },
+        ], { formatter: percent });
+        renderBars('merchantTiers', data.tiers || []);
+        renderBars('merchantChannels', data.channels || []);
+        renderBars('merchantCategories', data.categories || [], { valueKey: 'gmv', formatter: formatMoney });
+        renderBars('merchantBrands', data.brands || [], { valueKey: 'gmv', formatter: formatMoney });
+        renderBars('merchantCities', data.cities || [], { valueKey: 'gmv', formatter: formatMoney });
+
+        const trendCopy = document.getElementById('merchantTrendCopy');
+        const months = data.monthly || [];
+        const maxMonth = months.reduce((best, row) => (row.gmv > (best?.gmv || 0) ? row : best), null);
+        if (trendCopy && maxMonth) {
+          trendCopy.textContent = `${maxMonth.month} 是全年峰值，GMV ${formatMoney(maxMonth.gmv)}，订单 ${formatNumber(maxMonth.orders)}。`;
+        }
+        const trend = document.getElementById('merchantTrend');
+        if (trend && months.length) {
+          const max = Math.max(...months.map((row) => row.gmv), 1);
+          trend.innerHTML = months.map((row) => `<i class="trend-bar" title="${row.month} ${formatMoney(row.gmv)}" style="height:${Math.max(8, (row.gmv / max) * 100)}%"></i>`).join('');
+        }
+
+        const insights = document.getElementById('merchantInsights');
+        if (insights) {
+          insights.innerHTML = (data.agent_insights || []).map((item) => `<article class="insight-card"><strong>${item.title}</strong><p>${item.body}</p><b>${item.action}</b></article>`).join('');
+        }
+
+        const messages = document.getElementById('merchantMessages');
+        if (messages && !messages.dataset.ready) {
+          messages.dataset.ready = 'true';
+          (data.agent_replies || []).slice(0, 2).forEach((text) => addMerchantMessage('ai', text));
+        }
+      };
+
+      fetch('/merchant_analytics.json')
+        .then((response) => response.json())
+        .then(renderMerchant)
+        .catch(() => {
+          addMerchantMessage('ai', '商家数据暂时没有加载成功，但页面结构已经准备好了。');
+        });
+
+      const merchantInput = document.getElementById('merchantInput');
+      const merchantSend = document.getElementById('merchantSend');
+      const sendMerchantQuestion = () => {
+        const value = clean(merchantInput?.value || '');
+        if (!value) return;
+        addMerchantMessage('user', value);
+        addMerchantMessage('ai', merchantAnswer(value));
+        merchantInput.value = '';
+      };
+      merchantSend?.addEventListener('click', sendMerchantQuestion);
+      merchantInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          sendMerchantQuestion();
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    (() => {
       const landingFrame = document.getElementById('landingFrame');
+      const roleGateway = document.getElementById('roleGateway');
       const serviceApp = document.getElementById('serviceApp');
+      const merchantApp = document.getElementById('merchantApp');
+
+      const hideApps = () => {
+        landingFrame.hidden = true;
+        roleGateway.hidden = true;
+        serviceApp.hidden = true;
+        merchantApp.hidden = true;
+        document.body.classList.remove('show-landing');
+      };
+
+      const setView = (view) => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', view);
+        window.history.replaceState({}, '', url);
+      };
 
       const showService = () => {
-        landingFrame.hidden = true;
+        hideApps();
         serviceApp.hidden = false;
-        document.body.classList.remove('show-landing');
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        setView('service');
+      };
+
+      const showRole = () => {
+        hideApps();
+        roleGateway.hidden = false;
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        setView('login');
+      };
+
+      const showMerchant = () => {
+        hideApps();
+        merchantApp.hidden = false;
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        setView('merchant');
       };
 
       const showLanding = () => {
-        landingFrame.hidden = false;
+        roleGateway.hidden = true;
         serviceApp.hidden = true;
+        merchantApp.hidden = true;
+        landingFrame.hidden = false;
         document.body.classList.add('show-landing');
       };
+
+      document.querySelectorAll('[data-login-role="user"]').forEach((node) => {
+        node.addEventListener('click', showService);
+      });
+      document.querySelectorAll('[data-login-role="merchant"]').forEach((node) => {
+        node.addEventListener('click', showMerchant);
+      });
+      document.querySelectorAll('[data-open-login]').forEach((node) => {
+        node.addEventListener('click', showRole);
+      });
+      document.querySelectorAll('[data-open-service]').forEach((node) => {
+        node.addEventListener('click', showService);
+      });
 
       const params = new URLSearchParams(window.location.search);
       if (params.get('view') === 'service' || window.location.hash === '#service') {
         showService();
+      } else if (params.get('view') === 'merchant' || window.location.hash === '#merchant') {
+        showMerchant();
+      } else if (params.get('view') === 'login' || window.location.hash === '#login') {
+        showRole();
       } else {
         showLanding();
       }
