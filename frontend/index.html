@@ -699,9 +699,38 @@
         grid-template-columns: 1fr;
       }
     }
+
+
+    .landing-frame {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      border: 0;
+      background: #000;
+      z-index: 20;
+    }
+
+    .landing-frame[hidden],
+    .service-view[hidden] {
+      display: none;
+    }
+
+    body.show-landing {
+      overflow: hidden;
+      background: #000;
+    }
+
+    body.show-landing::before,
+    body.show-landing::after {
+      display: none;
+    }
+
   </style>
 </head>
-<body>
+<body class="show-landing">
+  <iframe id="landingFrame" class="landing-frame" src="/landing.html" title="ShopCare landing"></iframe>
+  <div id="serviceApp" class="service-view" hidden>
   <main class="page">
     <nav class="nav">
       <a class="brand" href="#">
@@ -887,5 +916,33 @@
       </aside>
     </section>
   </main>
+  </div>
+
+  <script>
+    (() => {
+      const landingFrame = document.getElementById('landingFrame');
+      const serviceApp = document.getElementById('serviceApp');
+
+      const showService = () => {
+        landingFrame.hidden = true;
+        serviceApp.hidden = false;
+        document.body.classList.remove('show-landing');
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      };
+
+      const showLanding = () => {
+        landingFrame.hidden = false;
+        serviceApp.hidden = true;
+        document.body.classList.add('show-landing');
+      };
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('view') === 'service' || window.location.hash === '#service') {
+        showService();
+      } else {
+        showLanding();
+      }
+    })();
+  </script>
 </body>
 </html>
