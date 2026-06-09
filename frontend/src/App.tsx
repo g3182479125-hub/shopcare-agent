@@ -63,6 +63,8 @@ type ModalState = {
   body: string
 }
 
+const CINEMATIC_VIDEO_URL = 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_083109_283f3553-e28f-428b-a723-d639c617eb2b.mp4'
+
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 const DEFAULT_ORDER = '3000029'
 const DEFAULT_TEXT = '我收到的商品有破损，想申请退款怎么办？'
@@ -97,6 +99,104 @@ const initialMessages: ChatMessage[] = [
     time: '10:21'
   }
 ]
+
+
+function CinematicLoginHero({ onEnter }: { onEnter: () => void }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    let frame = 0
+    let restartTimer: number | undefined
+    const fadeSeconds = 0.5
+
+    const setOpacity = (value: number) => {
+      video.style.opacity = String(Math.max(0, Math.min(1, value)))
+    }
+
+    const monitor = () => {
+      const duration = Number.isFinite(video.duration) ? video.duration : 0
+      const current = video.currentTime || 0
+
+      if (duration > 0) {
+        if (current < fadeSeconds) {
+          setOpacity(current / fadeSeconds)
+        } else if (duration - current < fadeSeconds) {
+          setOpacity((duration - current) / fadeSeconds)
+        } else {
+          setOpacity(1)
+        }
+      }
+
+      frame = window.requestAnimationFrame(monitor)
+    }
+
+    const restart = () => {
+      setOpacity(0)
+      restartTimer = window.setTimeout(() => {
+        video.currentTime = 0
+        void video.play()
+      }, 100)
+    }
+
+    video.addEventListener('ended', restart)
+    setOpacity(0)
+    void video.play()
+    frame = window.requestAnimationFrame(monitor)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      if (restartTimer) window.clearTimeout(restartTimer)
+      video.removeEventListener('ended', restart)
+    }
+  }, [])
+
+  return (
+    <main className="cinematic-page">
+      <div className="cinematic-video-shell">
+        <video
+          ref={videoRef}
+          className="cinematic-video"
+          src={CINEMATIC_VIDEO_URL}
+          muted
+          playsInline
+          autoPlay
+          preload="auto"
+        />
+        <div className="cinematic-gradient" />
+      </div>
+
+      <nav className="cinematic-nav" aria-label="Primary">
+        <button className="cinematic-logo" type="button" onClick={onEnter}>
+          Aethera<sup>®</sup>
+        </button>
+        <div className="cinematic-menu">
+          <button className="is-active" type="button">Home</button>
+          <button type="button">Studio</button>
+          <button type="button">About</button>
+          <button type="button">Journal</button>
+          <button type="button">Reach Us</button>
+        </div>
+        <button className="cinematic-nav-cta" type="button" onClick={onEnter}>Begin Journey</button>
+      </nav>
+
+      <section className="cinematic-hero">
+        <h1 className="animate-fade-rise">
+          Beyond <em>silence,</em> we build <em>the eternal.</em>
+        </h1>
+        <p className="animate-fade-rise-delay">
+          Building platforms for brilliant minds, fearless makers, and thoughtful souls.
+          Through the noise, we craft digital havens for deep work and pure flows.
+        </p>
+        <button className="cinematic-hero-cta animate-fade-rise-delay-2" type="button" onClick={onEnter}>
+          Begin Journey
+        </button>
+      </section>
+    </main>
+  )
+}
 
 function createSessionId() {
   const existing = window.localStorage.getItem('shopcare_session_id')
@@ -148,6 +248,7 @@ function historyFromMessages(items: ChatMessage[]): ConversationHistoryItem[] {
 }
 
 export default function App() {
+  const [showCinematicLogin, setShowCinematicLogin] = useState(true)
   const [sessionId] = useState(createSessionId)
   const [activeNav, setActiveNav] = useState('support')
   const [orderId, setOrderId] = useState(DEFAULT_ORDER)
@@ -295,6 +396,10 @@ export default function App() {
     setResult(null)
     window.localStorage.removeItem(STORAGE_KEY)
     notify('会话已清空')
+  }
+
+  if (showCinematicLogin) {
+    return <CinematicLoginHero onEnter={() => setShowCinematicLogin(false)} />
   }
 
   return (
