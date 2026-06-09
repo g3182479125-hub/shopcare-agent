@@ -24,7 +24,7 @@ body,
   height: 100%;
   min-width: 320px;
   margin: 0;
-  overflow: hidden;
+  overflow: auto;
   background: var(--neo-bg);
 }
 
@@ -50,6 +50,9 @@ button:disabled {
 
 .commerce-app {
   height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   background:
     radial-gradient(#000 1.15px, transparent 1.15px),
@@ -63,6 +66,7 @@ button:disabled {
   position: sticky;
   top: 0;
   z-index: 10;
+  flex-shrink: 0;
   height: 86px;
   display: grid;
   grid-template-columns: 260px minmax(280px, 1fr) 260px;
@@ -268,7 +272,8 @@ button:disabled {
 }
 
 .commerce-layout {
-  height: calc(100vh - 86px);
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 340px;
   gap: 20px;
@@ -285,11 +290,14 @@ button:disabled {
 }
 
 .left-nav {
-  height: calc(100% - 10px);
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 18px 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
   transform: rotate(-0.45deg);
 }
 
@@ -374,14 +382,15 @@ button:disabled {
 }
 
 .chat-card {
-  height: calc(100% - 10px);
+  height: 100%;
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
 .chat-header {
+  flex-shrink: 0;
   min-height: 104px;
   display: flex;
   align-items: center;
@@ -459,9 +468,12 @@ button:disabled {
   letter-spacing: 0.04em;
 }
 
-.chat-body {
+.chat-body,
+.messages-list {
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px 30px;
   background:
     linear-gradient(to right, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
@@ -469,15 +481,6 @@ button:disabled {
     #FFFDF5;
   background-size: 32px 32px;
   scroll-behavior: smooth;
-}
-
-.chat-body::-webkit-scrollbar {
-  width: 14px;
-}
-
-.chat-body::-webkit-scrollbar-thumb {
-  border: 3px solid #000;
-  background: var(--neo-accent);
 }
 
 .chat-row {
@@ -563,6 +566,7 @@ button:disabled {
 }
 
 .quick-actions {
+  flex-shrink: 0;
   display: flex;
   gap: 12px;
   padding: 14px 20px;
@@ -602,6 +606,7 @@ button:disabled {
 }
 
 .composer {
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: 116px 1fr auto auto;
   align-items: center;
@@ -671,6 +676,7 @@ button:disabled {
 }
 
 .error-line {
+  flex-shrink: 0;
   margin: -8px 20px 12px;
   border: 3px solid #000;
   background: var(--neo-accent);
@@ -681,10 +687,45 @@ button:disabled {
 }
 
 .order-panel {
-  height: calc(100% - 10px);
-  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 16px;
   transform: rotate(0.4deg);
+}
+
+.messages-list::-webkit-scrollbar,
+.left-nav::-webkit-scrollbar,
+.left-sidebar::-webkit-scrollbar,
+.order-panel::-webkit-scrollbar,
+.right-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.messages-list::-webkit-scrollbar-track,
+.left-nav::-webkit-scrollbar-track,
+.left-sidebar::-webkit-scrollbar-track,
+.order-panel::-webkit-scrollbar-track,
+.right-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages-list::-webkit-scrollbar-thumb,
+.left-nav::-webkit-scrollbar-thumb,
+.left-sidebar::-webkit-scrollbar-thumb,
+.order-panel::-webkit-scrollbar-thumb,
+.right-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 2px;
+}
+
+.messages-list::-webkit-scrollbar-thumb:hover,
+.left-nav::-webkit-scrollbar-thumb:hover,
+.left-sidebar::-webkit-scrollbar-thumb:hover,
+.order-panel::-webkit-scrollbar-thumb:hover,
+.right-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.32);
 }
 
 .panel-head {
@@ -1101,10 +1142,8 @@ button:disabled {
 @media (max-width: 760px) {
   html,
   body,
-  #root,
-  .commerce-app {
+  #root {
     height: 100%;
-    overflow: hidden;
   }
 
   .commerce-header {
@@ -1143,7 +1182,8 @@ button:disabled {
   }
 
   .commerce-layout {
-    height: calc(100vh - 128px);
+    flex: 1;
+    min-height: 0;
     grid-template-columns: 1fr;
     padding: 12px;
   }
@@ -1153,7 +1193,7 @@ button:disabled {
   }
 
   .chat-card {
-    height: calc(100% - 8px);
+    height: 100%;
   }
 
   .chat-header {

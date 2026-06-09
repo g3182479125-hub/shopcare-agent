@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx
 
+from app.agent.prompts import KIMI_VISION_SYSTEM_PROMPT
 from app.config import Settings
 
 
@@ -43,19 +44,6 @@ class KimiVisionAgent:
                 f"\n- 金额：{order_context.get('amount', '未知')}元"
             )
 
-        system_prompt = """你是电商售后图片分析专家。
-用户会上传商品问题图片，请快速判断图片是否能作为售后凭证，并返回严格 JSON。
-不要输出任何 JSON 以外的内容，不要加 markdown 代码块。
-JSON 格式如下：
-{
-  "product_condition": "商品外观状态的简洁描述",
-  "damage_details": ["损坏点1", "损坏点2"],
-  "severity": "轻微|中等|严重",
-  "evidence_valid": true,
-  "evidence_description": "该图片能否作为售后凭证的说明",
-  "suggested_action": "建议的处理方向"
-}"""
-
         user_content = [
             {
                 "type": "image_url",
@@ -78,11 +66,11 @@ JSON 格式如下：
                     json={
                         "model": self.model,
                         "messages": [
-                            {"role": "system", "content": system_prompt},
+                            {"role": "system", "content": KIMI_VISION_SYSTEM_PROMPT},
                             {"role": "user", "content": user_content},
                         ],
-                        "max_tokens": 420,
-                        "temperature": 0.2,
+                        "max_tokens": 200,
+                        "temperature": 0.7,
                     },
                 )
                 response.raise_for_status()

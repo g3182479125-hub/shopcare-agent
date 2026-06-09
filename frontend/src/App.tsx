@@ -162,11 +162,22 @@ export default function App() {
   const [toast, setToast] = useState('')
   const [modal, setModal] = useState<ModalState | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
-  const chatEndRef = useRef<HTMLDivElement | null>(null)
+  const messagesListRef = useRef<HTMLDivElement | null>(null)
+
+  const scrollToBottom = () => {
+    const msgList = messagesListRef.current || document.querySelector<HTMLElement>('.messages-list')
+    if (msgList) {
+      msgList.scrollTop = msgList.scrollHeight
+    }
+  }
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-40)))
   }, [messages])
+
+  useEffect(() => {
+    window.setTimeout(scrollToBottom, 0)
+  }, [messages.length, loading])
 
   const order = result?.order
   const decision = result?.decision || {}
@@ -254,7 +265,7 @@ export default function App() {
     setInput('')
     setLoading(true)
     setError('')
-    window.setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 60)
+    window.setTimeout(scrollToBottom, 60)
 
     try {
       const data = await postChat(text, currentOrder, image, sessionId, history)
@@ -267,7 +278,7 @@ export default function App() {
       }
       setMessages((items) => [...items, assistantMessage])
       removeImage()
-      window.setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 80)
+      window.setTimeout(scrollToBottom, 80)
     } catch (err) {
       setError(err instanceof Error ? err.message : '服务暂时不可用，请稍后再试。')
     } finally {
@@ -321,7 +332,7 @@ export default function App() {
       </header>
 
       <div className="commerce-layout">
-        <aside className="left-nav">
+        <aside className="left-nav left-sidebar">
           <nav>
             {navItems.map((item) => {
               const Icon = item.icon
@@ -337,7 +348,7 @@ export default function App() {
           </section>
         </aside>
 
-        <section className="chat-card">
+        <section className="chat-card chat-column">
           <div className="chat-header">
             <div className="agent-avatar"><Bot size={34} /></div>
             <div>
@@ -347,7 +358,7 @@ export default function App() {
             <button className="review-button" type="button" onClick={() => setModal({ title: '评价助手', body: '感谢评价。当前演示版本已记录你的反馈入口，后续可以接入评分接口。' })}><Star size={17} /> 评价助手</button>
           </div>
 
-          <div className="chat-body">
+          <div className="chat-body messages-list" ref={messagesListRef}>
             {messages.map((item) => (
               <article key={item.id} className={`chat-row ${item.role}`}>
                 {item.role === 'assistant' && <div className="mini-bot"><Bot size={18} /></div>}
@@ -372,7 +383,7 @@ export default function App() {
                 <div className="bubble typing"><Loader2 className="spin" size={17} /> 正在结合上下文分析...</div>
               </article>
             )}
-            <div ref={chatEndRef} />
+            <div />
           </div>
 
           <div className="quick-actions">
@@ -383,7 +394,7 @@ export default function App() {
             <button type="button" onClick={clearChat}><X size={17} /> 清空会话</button>
           </div>
 
-          <div className="composer">
+          <div className="composer input-area">
             <input className="order-input" value={orderId} onChange={(event) => setOrderId(event.target.value)} placeholder="订单号" />
             <input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={onKeyDown} placeholder="请输入您想咨询的问题..." />
             <input ref={fileRef} hidden type="file" accept="image/*" onChange={onFileChange} />
@@ -397,7 +408,7 @@ export default function App() {
           {error && <p className="error-line">{error}</p>}
         </section>
 
-        <aside className="order-panel">
+        <aside className="order-panel right-panel">
           <div className="panel-head">
             <h2>订单详情</h2>
             <button type="button" onClick={() => openNav('orders')}>查看订单</button>

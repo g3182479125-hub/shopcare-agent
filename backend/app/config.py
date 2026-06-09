@@ -38,7 +38,7 @@ class Settings:
         self.llm_api_key = get("LLM_API_KEY")
         self.llm_base_url = get("LLM_BASE_URL", "https://api.deepseek.com")
         self.llm_model = get("LLM_MODEL", "deepseek-chat")
-        self.llm_temperature = float(get("LLM_TEMPERATURE", "0.2") or "0.2")
+        self.llm_temperature = float(get("LLM_TEMPERATURE", "0.7") or "0.7")
         self.llm_timeout_seconds = float(get("LLM_TIMEOUT_SECONDS", "6") or "6")
 
         self.kimi_api_key = get("KIMI_API_KEY")

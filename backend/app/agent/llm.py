@@ -33,8 +33,8 @@ class OptionalLLMClient:
         try:
             response = client.chat.completions.create(
                 model=self.settings.llm_model,
-                temperature=self.settings.llm_temperature,
-                max_tokens=650,
+                temperature=0.7,
+                max_tokens=200,
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},

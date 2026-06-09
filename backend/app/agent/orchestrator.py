@@ -320,49 +320,28 @@ class ShopCareAgent:
         decision: dict[str, Any],
         image_analysis: dict[str, Any],
     ) -> str:
-        condition = image_analysis.get("product_condition") or "我能看到商品存在异常"
-        details = "、".join(image_analysis.get("damage_details") or [])
+        condition = image_analysis.get("product_condition") or "问题比较明显"
         evidence_valid = bool(image_analysis.get("evidence_valid"))
-        evidence_text = image_analysis.get("evidence_description") or ("这张图可以作为售后凭证" if evidence_valid else "这张图目前还不够完整")
-        severity = image_analysis.get("severity") or "中等"
-        resolution = decision.get("resolution")
-        status = decision.get("status")
+        resolution = decision.get("resolution") or "manual_review"
+        status = decision.get("status") or "need_info"
         refund_amount = float(decision.get("refund_amount") or 0)
         compensation = float(decision.get("compensation_amount") or 0)
-        next_steps = "；".join(decision.get("next_steps") or [])
 
-        lines: list[str] = []
-        lines.append("我看过你上传的图片了，这张图不是白传的，我已经把它当作售后凭证一起判断了。")
+        if not evidence_valid:
+            return "图看到了，但还不够清楚。再补一张商品整体、破损处和外包装的照片。"
 
-        if order:
-            lines.append(
-                f"对应的是订单 {order.get('order_id')}，商品是“{order.get('product_name')}”。"
-                f"图片里我看到：{condition}。"
-            )
-        else:
-            lines.append(f"图片里我看到：{condition}。")
+        if decision.get("need_human_review") or status in {"need_info", "manual_review"}:
+            return f"图看到了，{condition}。这单需要人工复核，我帮你转接？"
 
-        if details:
-            lines.append(f"比较关键的点是：{details}。严重程度我先按“{severity}”处理。")
-        lines.append(f"凭证判断：{evidence_text}。")
+        if resolution == "refund_only":
+            amount_text = f"退 {refund_amount:.2f}" if refund_amount else "可以退款"
+            coupon_text = f"，另外补 {compensation:.2f} 券" if compensation else ""
+            return f"图看到了，{condition}。{amount_text}，不用寄回{coupon_text}。我帮你提交？"
 
-        if evidence_valid and status == "approved":
-            money_text = f"退款金额暂按 {refund_amount:.2f} 元处理" if refund_amount else "可以进入退款处理"
-            if compensation:
-                money_text += f"，另外建议补偿 {compensation:.2f} 元"
-            lines.append(f"所以这单我建议直接走 {resolution}，{money_text}。")
-            lines.append("如果你回复“可以”，我就按这个结论继续帮你整理成待提交的售后申请。")
-        elif evidence_valid:
-            lines.append(f"这张图能支撑你的诉求，但这单还需要按 {resolution} 再走一步核验。")
-            lines.append("你可以回复“可以”，我会把当前图片和订单上下文一起带到下一步。")
-        else:
-            lines.append("不过为了让审核更稳，我建议你再补一张更清楚的照片：尽量拍到商品整体、破损位置和外包装。")
+        if resolution in {"exchange", "replacement"}:
+            return f"图看到了，{condition}。可以换货，你要换同款吗？"
 
-        if next_steps:
-            lines.append(f"下一步很简单：{next_steps}。")
-        if policy_hits:
-            lines.append(f"我参考的规则是：{policy_hits[0].get('title')}。")
-        return "\n\n".join(lines).strip()
+        return f"图看到了，{condition}。这单可以继续处理，我帮你提交？"
 
     def _compose_answer(
         self,
@@ -377,32 +356,28 @@ class ShopCareAgent:
         image_analysis: dict[str, Any] | None,
     ) -> str:
         if not order:
-            return "我先帮你接住这个问题，不过现在还缺订单号。你把订单号发我一下，我就能看订单状态，再判断是退款、退货、换货还是补发更合适。"
+            return "哪个订单？"
 
-        lines = [
-            f"我先帮你看了这单：{order.get('order_id')}，商品是 {order.get('product_name')}，现在状态是 {order.get('order_status')}。"
-        ]
-        if user and user.get("user_tier") in {"VIP", "HighValue"}:
-            lines.append("你是平台的高价值用户，这类售后我会优先按更稳妥的方式处理。")
-        if image_analysis:
-            details = "、".join(image_analysis.get("damage_details") or [])
-            valid_text = "有效" if image_analysis.get("evidence_valid") else "暂不充分"
-            lines.append(
-                f"Kimi 图片凭证分析显示：{image_analysis.get('product_condition')}。"
-                f"损坏详情：{details or '未识别到明确损坏点'}；凭证判断：{valid_text}。"
-            )
-        lines.append(
-            f"这单我建议走 {decision.get('resolution')}。当前判断是 {decision.get('status')}，主要原因是：{decision.get('reason')}"
-        )
-        next_steps = "；".join(decision.get("next_steps") or [])
-        if next_steps:
-            lines.append(f"你接下来先做这一步就好：{next_steps}。")
-        if policy_hits:
-            lines.append(f"处理依据：{policy_hits[0].get('title')}。")
-        if similar_cases:
-            lines.append(f"系统检索到 {len(similar_cases)} 条相似售后案例，常见处理方式包括 {similar_cases[0].get('resolution')}。")
-        lines.append("这类情况我建议让人工再复核一下，避免你后面来回补材料。" if decision.get("need_human_review") else "目前看不需要先转人工，我可以继续帮你往下办。")
-        return "\n".join(lines).strip()
+        status = decision.get("status")
+        resolution = decision.get("resolution")
+        refund_amount = float(decision.get("refund_amount") or 0)
+        compensation = float(decision.get("compensation_amount") or 0)
+
+        if decision.get("need_human_review") or status in {"need_info", "manual_review"}:
+            return "这单还差一点凭证，需要人工复核。我帮你转接？"
+
+        if resolution == "refund_only":
+            amount_text = f"退 {refund_amount:.2f}" if refund_amount else "可以退款"
+            coupon_text = f"，另外补 {compensation:.2f} 券" if compensation else ""
+            return f"{amount_text}，不用寄回{coupon_text}。我帮你提交？"
+
+        if resolution in {"exchange", "replacement"}:
+            return "可以换货。你要换同款吗？"
+
+        if intent in {"logistics", "shipping"}:
+            return "物流确实异常了。我帮你催一下，如果今天还不动，可以申请补发。"
+
+        return "可以继续处理。我帮你提交？"
 
 
 def _format_image_context(analysis: dict[str, Any]) -> str:
