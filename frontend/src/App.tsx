@@ -63,8 +63,6 @@ type ModalState = {
   body: string
 }
 
-const CINEMATIC_VIDEO_URL = 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_083109_283f3553-e28f-428b-a723-d639c617eb2b.mp4'
-
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 const DEFAULT_ORDER = '3000029'
 const DEFAULT_TEXT = '我收到的商品有破损，想申请退款怎么办？'
@@ -101,98 +99,66 @@ const initialMessages: ChatMessage[] = [
 ]
 
 
-function CinematicLoginHero({ onEnter }: { onEnter: () => void }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-
-    let frame = 0
-    let restartTimer: number | undefined
-    const fadeSeconds = 0.5
-
-    const setOpacity = (value: number) => {
-      video.style.opacity = String(Math.max(0, Math.min(1, value)))
-    }
-
-    const monitor = () => {
-      const duration = Number.isFinite(video.duration) ? video.duration : 0
-      const current = video.currentTime || 0
-
-      if (duration > 0) {
-        if (current < fadeSeconds) {
-          setOpacity(current / fadeSeconds)
-        } else if (duration - current < fadeSeconds) {
-          setOpacity((duration - current) / fadeSeconds)
-        } else {
-          setOpacity(1)
-        }
-      }
-
-      frame = window.requestAnimationFrame(monitor)
-    }
-
-    const restart = () => {
-      setOpacity(0)
-      restartTimer = window.setTimeout(() => {
-        video.currentTime = 0
-        void video.play()
-      }, 100)
-    }
-
-    video.addEventListener('ended', restart)
-    setOpacity(0)
-    void video.play()
-    frame = window.requestAnimationFrame(monitor)
-
-    return () => {
-      window.cancelAnimationFrame(frame)
-      if (restartTimer) window.clearTimeout(restartTimer)
-      video.removeEventListener('ended', restart)
-    }
-  }, [])
+function NeoBrutalLoginPage({ onEnter }: { onEnter: () => void }) {
+  const features = ['ORDER TOOLS', 'VISION AGENT', 'POLICY RAG', 'HUMAN HANDOFF']
 
   return (
-    <main className="cinematic-page">
-      <div className="cinematic-video-shell">
-        <video
-          ref={videoRef}
-          className="cinematic-video"
-          src={CINEMATIC_VIDEO_URL}
-          muted
-          playsInline
-          autoPlay
-          preload="auto"
-        />
-        <div className="cinematic-gradient" />
-      </div>
+    <main className="neo-login-page">
+      <div className="neo-grid-bg" />
+      <div className="neo-noise-bg" />
 
-      <nav className="cinematic-nav" aria-label="Primary">
-        <button className="cinematic-logo" type="button" onClick={onEnter}>
-          Aethera<sup>®</sup>
+      <header className="neo-login-nav">
+        <button className="neo-logo" type="button" onClick={onEnter}>
+          <span>SHOPCARE</span>
+          <b>AGENT</b>
         </button>
-        <div className="cinematic-menu">
-          <button className="is-active" type="button">Home</button>
-          <button type="button">Studio</button>
-          <button type="button">About</button>
-          <button type="button">Journal</button>
-          <button type="button">Reach Us</button>
+        <nav className="neo-links" aria-label="Login navigation">
+          <button type="button">DEMO</button>
+          <button type="button">TOOLS</button>
+          <button type="button">CASES</button>
+        </nav>
+        <button className="neo-small-cta" type="button" onClick={onEnter}>ENTER APP</button>
+      </header>
+
+      <section className="neo-hero">
+        <div className="neo-hero-copy">
+          <div className="neo-sticker neo-sticker-red">AFTER-SALES OS</div>
+          <h1>
+            MAKE REFUNDS
+            <span>LOUDER.</span>
+          </h1>
+          <p>
+            一个电商售后智能体项目：订单查询、用户画像、政策检索、图片凭证和决策轨迹，
+            全部放进一个能直接演示的 Agent 工作台。
+          </p>
+          <div className="neo-hero-actions">
+            <button className="neo-primary-btn" type="button" onClick={onEnter}>开始使用</button>
+            <button className="neo-secondary-btn" type="button" onClick={onEnter}>查看 Demo</button>
+          </div>
         </div>
-        <button className="cinematic-nav-cta" type="button" onClick={onEnter}>Begin Journey</button>
-      </nav>
 
-      <section className="cinematic-hero">
-        <h1 className="animate-fade-rise">
-          Beyond <em>silence,</em> we build <em>the eternal.</em>
-        </h1>
-        <p className="animate-fade-rise-delay">
-          Building platforms for brilliant minds, fearless makers, and thoughtful souls.
-          Through the noise, we craft digital havens for deep work and pure flows.
-        </p>
-        <button className="cinematic-hero-cta animate-fade-rise-delay-2" type="button" onClick={onEnter}>
-          Begin Journey
-        </button>
+        <aside className="neo-login-card" aria-label="Login preview">
+          <div className="neo-card-badge">LIVE</div>
+          <h2>登录入口</h2>
+          <label>
+            <span>账号</span>
+            <input value="intern-demo@shopcare.ai" readOnly />
+          </label>
+          <label>
+            <span>项目</span>
+            <input value="ShopCare Agent" readOnly />
+          </label>
+          <button className="neo-card-submit" type="button" onClick={onEnter}>
+            进入售后工作台
+          </button>
+          <div className="neo-feature-list">
+            {features.map((item) => <span key={item}>{item}</span>)}
+          </div>
+        </aside>
+
+        <div className="neo-shape neo-shape-yellow">AI</div>
+        <div className="neo-shape neo-shape-violet">RAG</div>
+        <div className="neo-shape neo-shape-red">KIMI</div>
       </section>
     </main>
   )
@@ -248,7 +214,7 @@ function historyFromMessages(items: ChatMessage[]): ConversationHistoryItem[] {
 }
 
 export default function App() {
-  const [showCinematicLogin, setShowCinematicLogin] = useState(true)
+  const [showLogin, setShowLogin] = useState(true)
   const [sessionId] = useState(createSessionId)
   const [activeNav, setActiveNav] = useState('support')
   const [orderId, setOrderId] = useState(DEFAULT_ORDER)
@@ -398,8 +364,8 @@ export default function App() {
     notify('会话已清空')
   }
 
-  if (showCinematicLogin) {
-    return <CinematicLoginHero onEnter={() => setShowCinematicLogin(false)} />
+  if (showLogin) {
+    return <NeoBrutalLoginPage onEnter={() => setShowLogin(false)} />
   }
 
   return (
