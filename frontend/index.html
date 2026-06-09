@@ -83,14 +83,10 @@
 
     .page {
       width: min(1720px, calc(100% - 32px));
-      height: 100vh;
-      max-height: 100vh;
-      min-height: 0;
+      min-height: calc(100vh + 260px);
       margin: 0 auto;
-      padding: 22px 0;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      padding: 22px 0 0;
+      overflow: visible;
     }
 
     .nav {
@@ -179,8 +175,7 @@
     }
 
     .hero-title {
-      flex-shrink: 0;
-      margin: 36px auto 22px;
+      margin: 58px auto 28px;
       text-align: center;
     }
 
@@ -211,7 +206,10 @@
     }
 
     .grid {
-      flex: 1;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      max-height: 100vh;
       min-height: 0;
       display: grid;
       grid-template-columns: 280px minmax(760px, 1fr) 300px;
@@ -780,6 +778,9 @@
       }
 
       .grid {
+        position: static;
+        height: auto;
+        max-height: none;
         grid-template-columns: 1fr;
         overflow: visible;
       }
@@ -812,9 +813,8 @@
     }
 
     .service-view {
-      height: 100vh;
-      max-height: 100vh;
-      overflow: hidden;
+      min-height: 100vh;
+      overflow: visible;
     }
 
     body.show-landing {
