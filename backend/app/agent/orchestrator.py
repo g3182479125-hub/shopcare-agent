@@ -10,6 +10,7 @@ from app.agent.runtime import build_agent_plan, build_context_snapshot, detect_c
 from app.agent.tools import ShopcareTools, detect_intent, extract_order_id
 from app.config import get_settings
 from app.schemas import ChatResponse, ToolTrace
+from app.services.knowledge_base import KnowledgeBase
 from app.services.repository import ShopcareRepository
 
 
@@ -84,6 +85,14 @@ class ShopCareAgent:
         category = order.get("category") if order else None
         policy_query = " ".join([message, history_text, intent, category or ""])
         policy_hits = tools.search_policy(policy_query)
+        knowledge_hits = KnowledgeBase(self.repository.conn).search(role="user", query=policy_query, limit=4)
+        tools.record_trace(
+            "KnowledgeRAGTool",
+            {"role": "user", "query": policy_query[:240]},
+            knowledge_hits,
+            label="Knowledge base search",
+            summary=f"{len(knowledge_hits)} chunks",
+        )
         similar_cases = tools.search_cases(query=" ".join([message, history_text]), category=category) if order else tools.search_cases(query=message, category=None)
         decision = tools.decide(message=message, intent=intent, order=order, user=user, policy_hits=policy_hits)
         decision, guardrails = validate_decision(order=order, decision=decision)
@@ -131,6 +140,7 @@ class ShopCareAgent:
                 conversation_history=history,
                 context_summary=context_snapshot["summary"],
                 agent_plan=plan,
+                knowledge_hits=knowledge_hits,
             )
             if llm_answer:
                 meta = self.text_llm.last_meta

@@ -171,6 +171,32 @@ def init_schema(conn: sqlite3.Connection) -> None:
         );
 
         CREATE INDEX IF NOT EXISTS idx_app_llm_cache_expires ON app_llm_cache(expires_at);
+
+        CREATE TABLE IF NOT EXISTS knowledge_documents (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            role TEXT NOT NULL CHECK(role IN ('user', 'merchant')),
+            title TEXT NOT NULL,
+            source_name TEXT NOT NULL,
+            mime_type TEXT NOT NULL,
+            char_count INTEGER NOT NULL DEFAULT 0,
+            chunk_count INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES app_users(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS knowledge_chunks (
+            id TEXT PRIMARY KEY,
+            document_id TEXT NOT NULL,
+            role TEXT NOT NULL CHECK(role IN ('user', 'merchant')),
+            chunk_index INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(document_id) REFERENCES knowledge_documents(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_knowledge_documents_user_role ON knowledge_documents(user_id, role, created_at);
+        CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_role ON knowledge_chunks(role, document_id);
         """
     )
     conn.commit()

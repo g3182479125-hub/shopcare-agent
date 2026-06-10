@@ -28,6 +28,7 @@ from app.schemas import (
 from app.security import create_access_token, decode_access_token
 from app.services.account_service import AccountService
 from app.services.conversation_store import ConversationStore
+from app.services.knowledge_base import KnowledgeBase
 from app.services.repository import ShopcareRepository
 
 settings = get_settings()
@@ -286,7 +287,7 @@ async def merchant_chat(
                 raise HTTPException(status_code=400, detail="Image must be under 5MB")
 
     with get_connection() as conn:
-        agent = MerchantAnalyticsAgent(settings)
+        agent = MerchantAnalyticsAgent(settings, conn)
         result = await agent.run(
             message=(message or "").strip(),
             conversation_history=history_items,
@@ -308,7 +309,7 @@ async def merchant_chat(
 @app.post("/api/merchant/agent/chat/stream")
 async def merchant_chat_stream(request: Request, payload: MerchantChatRequest) -> StreamingResponse:
     with get_connection() as conn:
-        agent = MerchantAnalyticsAgent(settings)
+        agent = MerchantAnalyticsAgent(settings, conn)
         result = await agent.run(
             message=payload.message.strip(),
             conversation_history=[item.model_dump() for item in payload.conversation_history[-12:]],
@@ -408,6 +409,62 @@ def safe_profile(profile: dict[str, str]) -> dict[str, str]:
         "model": profile.get("model", ""),
         "configured": "yes" if profile.get("api_key") else "no",
     }
+
+
+@app.post("/api/knowledge/documents")
+async def upload_knowledge_document(
+    request: Request,
+    role: str = Form(default="user"),
+    title: str | None = Form(default=None),
+    file: UploadFile = File(...),
+) -> dict[str, Any]:
+    user = _current_user(request)
+    if role != user["role"]:
+        raise HTTPException(status_code=403, detail="Knowledge documents must match your current role")
+    content = await file.read()
+    with get_connection() as conn:
+        try:
+            document = KnowledgeBase(conn).add_document(
+                user_id=user["id"],
+                role=role,
+                title=title or file.filename or "Knowledge document",
+                source_name=file.filename or "upload.txt",
+                mime_type=file.content_type or "text/plain",
+                content_bytes=content,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"document": document}
+
+
+@app.get("/api/knowledge/documents")
+def list_knowledge_documents(request: Request, role: str | None = None) -> dict[str, Any]:
+    user = _current_user(request)
+    selected_role = role or user["role"]
+    if selected_role != user["role"]:
+        raise HTTPException(status_code=403, detail="Cannot read another role's knowledge documents")
+    with get_connection() as conn:
+        return {"items": KnowledgeBase(conn).list_documents(user_id=user["id"], role=selected_role)}
+
+
+@app.get("/api/knowledge/search")
+def search_knowledge(request: Request, q: str, role: str | None = None, limit: int = 5) -> dict[str, Any]:
+    user = _current_user(request)
+    selected_role = role or user["role"]
+    if selected_role != user["role"]:
+        raise HTTPException(status_code=403, detail="Cannot search another role's knowledge documents")
+    with get_connection() as conn:
+        return {"items": KnowledgeBase(conn).search(role=selected_role, query=q, limit=max(1, min(limit, 10)))}
+
+
+@app.delete("/api/knowledge/documents/{document_id}")
+def delete_knowledge_document(request: Request, document_id: str) -> dict[str, bool]:
+    user = _current_user(request)
+    with get_connection() as conn:
+        ok = KnowledgeBase(conn).delete_document(document_id=document_id, user_id=user["id"])
+        if not ok:
+            raise HTTPException(status_code=404, detail="Knowledge document not found")
+        return {"ok": True}
 
 
 @app.get("/api/orders/{order_id}")

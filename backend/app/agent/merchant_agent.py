@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import sqlite3
 import time
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ import httpx
 
 from app.agent.llm import OptionalLLMClient
 from app.config import Settings
+from app.services.knowledge_base import KnowledgeBase
 
 
 MERCHANT_SYSTEM_PROMPT = """你是 ShopCare Merchant 的商家数据分析 Agent。
@@ -43,9 +45,10 @@ MERCHANT_IMAGE_SYSTEM_PROMPT = """你是商家经营分析场景的图片理解 
 
 
 class MerchantAnalyticsAgent:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, conn: sqlite3.Connection | None = None) -> None:
         self.settings = settings
         self.text_llm = OptionalLLMClient(settings, profile="agent")
+        self.conn = conn
         self.data = load_merchant_analytics()
 
     async def run(
@@ -69,12 +72,14 @@ class MerchantAnalyticsAgent:
             image_llm_used = bool(image_analysis)
 
         focus = detect_focus(message, image_analysis)
+        knowledge_hits = self._search_knowledge(message=message, history=history, focus=focus)
         fallback = fallback_answer(message=message, data=self.data, focus=focus, image_analysis=image_analysis)
         answer = self._deepseek_answer(
             message=message,
             history=history,
             focus=focus,
             image_analysis=image_analysis,
+            knowledge_hits=knowledge_hits,
         ) or fallback
         meta = self.text_llm.last_meta
         chart_directive = build_chart_directive(focus, self.data)
@@ -90,8 +95,15 @@ class MerchantAnalyticsAgent:
                 "history_turns": len(history),
                 "has_image": bool(image_analysis),
                 "data_generated_at": self.data.get("generated_at"),
+                "knowledge_hits": len(knowledge_hits),
             },
         }
+
+    def _search_knowledge(self, *, message: str, history: list[dict[str, str]], focus: str) -> list[dict[str, Any]]:
+        if self.conn is None:
+            return []
+        query = " ".join([message, focus, " ".join(item.get("content", "") for item in history[-4:])])
+        return KnowledgeBase(self.conn).search(role="merchant", query=query, limit=4)
 
     def _deepseek_answer(
         self,
@@ -100,6 +112,7 @@ class MerchantAnalyticsAgent:
         history: list[dict[str, str]],
         focus: str,
         image_analysis: dict[str, Any] | None,
+        knowledge_hits: list[dict[str, Any]],
     ) -> str | None:
         if not self.text_llm.enabled:
             return None
@@ -109,6 +122,7 @@ class MerchantAnalyticsAgent:
             "conversation_history": history[-12:],
             "image_analysis": image_analysis,
             "merchant_data": compact_merchant_data(self.data),
+            "knowledge_hits": knowledge_hits,
         }
         return self.text_llm.complete(
             system=MERCHANT_SYSTEM_PROMPT,
