@@ -749,6 +749,114 @@
       padding: 14px;
     }
 
+    .knowledge-card {
+      display: grid;
+      gap: 12px;
+    }
+
+    .knowledge-card .panel-head {
+      margin-bottom: 0;
+    }
+
+    .knowledge-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .knowledge-actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .knowledge-file {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.7);
+      padding: 10px 12px;
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .knowledge-actions button,
+    .knowledge-row button {
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #101418;
+      padding: 10px 13px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .knowledge-list {
+      display: grid;
+      gap: 8px;
+      max-height: 160px;
+      overflow-y: auto;
+      padding-right: 4px;
+      scrollbar-width: thin;
+    }
+
+    .knowledge-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .knowledge-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .knowledge-list::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .knowledge-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.045);
+      padding: 10px;
+    }
+
+    .knowledge-row strong {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 13px;
+      font-weight: 600;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .knowledge-row span {
+      display: block;
+      margin-top: 3px;
+      color: rgba(255, 255, 255, 0.48);
+      font-size: 11px;
+    }
+
+    .knowledge-status {
+      min-height: 18px;
+      color: rgba(134, 239, 172, 0.86);
+      font-size: 12px;
+    }
+
+    .knowledge-status.error {
+      color: #fca5a5;
+    }
+
     .chart {
       height: 58px;
       margin-top: 18px;
@@ -982,6 +1090,7 @@
       min-height: 0;
       display: flex;
       flex-direction: column;
+      gap: 16px;
     }
 
     .merchant-stack {
@@ -1591,6 +1700,21 @@
           </div>
         </section>
 
+        <section class="glass panel knowledge-card" data-knowledge-role="user">
+          <div class="panel-head">
+            <h2>售后知识库</h2>
+            <span class="context-pill" id="userKnowledgeCount">0 份</span>
+          </div>
+          <p>上传平台规则、客服 SOP 或活动说明，售后 Agent 会自动检索参考。</p>
+          <div class="knowledge-actions">
+            <span class="knowledge-file" id="userKnowledgeFileName">支持 txt / md / csv / json</span>
+            <button type="button" id="userKnowledgePick">上传</button>
+            <input id="userKnowledgeInput" type="file" accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json" hidden />
+          </div>
+          <div class="knowledge-list" id="userKnowledgeList"></div>
+          <div class="knowledge-status" id="userKnowledgeStatus">登录后可管理资料。</div>
+        </section>
+
         <section class="glass panel">
           <div class="tabs">
             <button class="active">Recommended</button>
@@ -1714,6 +1838,22 @@
               <button id="merchantSend" type="button"><iconify-icon icon="solar:arrow-right-up-linear"></iconify-icon></button>
             </div>
           </section>
+          <section class="merchant-card knowledge-card" data-knowledge-role="merchant">
+            <div class="panel-head">
+              <div>
+                <h2>经营知识库</h2>
+                <p>上传运营计划、仓配规则、活动复盘，商家 Agent 会结合资料回答。</p>
+              </div>
+              <span class="context-pill" id="merchantKnowledgeCount">0 份</span>
+            </div>
+            <div class="knowledge-actions">
+              <span class="knowledge-file" id="merchantKnowledgeFileName">支持 txt / md / csv / json</span>
+              <button type="button" id="merchantKnowledgePick">上传</button>
+              <input id="merchantKnowledgeInput" type="file" accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json" hidden />
+            </div>
+            <div class="knowledge-list" id="merchantKnowledgeList"></div>
+            <div class="knowledge-status" id="merchantKnowledgeStatus">登录后可管理资料。</div>
+          </section>
         </aside>
       </section>
     </main>
@@ -1800,6 +1940,137 @@
       const conversationHistory = [];
       const authHeaders = () => window.ShopCareAuth?.authHeaders?.() || {};
       const activeConversationId = () => window.ShopCareAuth?.getConversation?.('user') || null;
+
+      window.ShopCareCreateKnowledgeController = (config) => {
+        const input = document.getElementById(config.inputId);
+        const pick = document.getElementById(config.pickId);
+        const fileName = document.getElementById(config.fileNameId);
+        const list = document.getElementById(config.listId);
+        const count = document.getElementById(config.countId);
+        const status = document.getElementById(config.statusId);
+        const apiBase = config.apiBase || API_BASE;
+
+        const setStatus = (text, isError = false) => {
+          if (!status) return;
+          status.textContent = text || '';
+          status.classList.toggle('error', Boolean(isError));
+        };
+
+        const render = (items = []) => {
+          if (count) count.textContent = `${items.length} 份`;
+          if (!list) return;
+          list.innerHTML = '';
+          if (!items.length) {
+            const empty = document.createElement('p');
+            empty.textContent = '还没有上传资料。';
+            list.appendChild(empty);
+            return;
+          }
+          items.forEach((item) => {
+            const row = document.createElement('div');
+            row.className = 'knowledge-row';
+            const meta = document.createElement('div');
+            const title = document.createElement('strong');
+            title.textContent = item.title || item.source_name || '未命名资料';
+            const sub = document.createElement('span');
+            sub.textContent = `${item.chunk_count || 0} 段 · ${item.char_count || 0} 字`;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.textContent = '删除';
+            remove.dataset.knowledgeDelete = item.id;
+            meta.append(title, sub);
+            row.append(meta, remove);
+            list.appendChild(row);
+          });
+        };
+
+        const load = async () => {
+          if (!window.ShopCareAuth?.getToken?.()) {
+            setStatus('登录后可管理资料。');
+            render([]);
+            return;
+          }
+          try {
+            const response = await fetch(`${apiBase}/api/knowledge/documents?role=${config.role}`, { headers: authHeaders() });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || '知识库读取失败');
+            render(data.items || []);
+            setStatus((data.items || []).length ? '资料已同步，Agent 回答时会自动检索。' : '可以上传资料让 Agent 参考。');
+          } catch (error) {
+            setStatus(error.message || '知识库读取失败', true);
+          }
+        };
+
+        const upload = async (file) => {
+          if (!file) return;
+          if (!window.ShopCareAuth?.getToken?.()) {
+            setStatus('请先登录再上传资料。', true);
+            return;
+          }
+          if (fileName) fileName.textContent = file.name;
+          const form = new FormData();
+          form.append('role', config.role);
+          form.append('title', file.name.replace(/\.[^.]+$/, ''));
+          form.append('file', file);
+          setStatus('正在上传并切分资料...');
+          try {
+            const response = await fetch(`${apiBase}/api/knowledge/documents`, { method: 'POST', headers: authHeaders(), body: form });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || '资料上传失败');
+            setStatus('上传成功，下一轮回答会参考它。');
+            await load();
+          } catch (error) {
+            setStatus(error.message || '资料上传失败', true);
+          } finally {
+            if (input) input.value = '';
+          }
+        };
+
+        const remove = async (id) => {
+          if (!id) return;
+          try {
+            const response = await fetch(`${apiBase}/api/knowledge/documents/${id}`, { method: 'DELETE', headers: authHeaders() });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || '删除失败');
+            setStatus('已删除资料。');
+            await load();
+          } catch (error) {
+            setStatus(error.message || '删除失败', true);
+          }
+        };
+
+        pick?.addEventListener('click', () => input?.click());
+        input?.addEventListener('change', () => upload(input.files?.[0]));
+        list?.addEventListener('click', (event) => {
+          const button = event.target.closest('button[data-knowledge-delete]');
+          if (button) remove(button.dataset.knowledgeDelete);
+        });
+
+        return {
+          load,
+          setHitCount: (hits = 0) => {
+            const n = Number(hits || 0);
+            setStatus(n > 0 ? `本次回答参考了 ${n} 条自定义资料。` : '本次回答未命中自定义资料。');
+          },
+        };
+      };
+
+      const knowledgeHitsFromAgent = (data) => {
+        if (data?.context_used?.knowledge_hits != null) return Number(data.context_used.knowledge_hits || 0);
+        const trace = (data?.traces || []).find((item) => item.tool_name === 'KnowledgeRAGTool');
+        return Array.isArray(trace?.output) ? trace.output.length : 0;
+      };
+
+      const userKnowledge = window.ShopCareCreateKnowledgeController({
+        role: 'user',
+        inputId: 'userKnowledgeInput',
+        pickId: 'userKnowledgePick',
+        fileNameId: 'userKnowledgeFileName',
+        listId: 'userKnowledgeList',
+        countId: 'userKnowledgeCount',
+        statusId: 'userKnowledgeStatus',
+      });
+      window.ShopCareServiceLoadKnowledge = () => userKnowledge?.load();
 
       const callAgentApi = async (value, imageFile) => {
         const history = conversationHistory.slice(-10);
@@ -1942,6 +2213,7 @@
           if (data.conversation_id) window.ShopCareAuth?.setConversation?.('user', data.conversation_id);
           const answer = data.answer || streamText || replyFor(value);
           addMessage('ai', answer);
+          userKnowledge?.setHitCount(knowledgeHitsFromAgent(data));
           conversationHistory.push({ role: 'assistant', content: answer });
         } catch (error) {
           thinking.remove();
@@ -2132,6 +2404,17 @@
       let merchantImage = null;
       const merchantAuthHeaders = () => window.ShopCareAuth?.authHeaders?.() || {};
       const activeMerchantConversationId = () => window.ShopCareAuth?.getConversation?.('merchant') || null;
+      const merchantKnowledge = window.ShopCareCreateKnowledgeController?.({
+        role: 'merchant',
+        apiBase: MERCHANT_API_BASE,
+        inputId: 'merchantKnowledgeInput',
+        pickId: 'merchantKnowledgePick',
+        fileNameId: 'merchantKnowledgeFileName',
+        listId: 'merchantKnowledgeList',
+        countId: 'merchantKnowledgeCount',
+        statusId: 'merchantKnowledgeStatus',
+      });
+      window.ShopCareMerchantLoadKnowledge = () => merchantKnowledge?.load();
 
       const renderBars = (id, rows, options = {}) => {
         const target = document.getElementById(id);
@@ -2280,8 +2563,11 @@
       const setMerchantProvider = (provider) => {
         const target = document.getElementById('merchantProvider');
         if (!target) return;
-        const names = { deepseek: 'DeepSeek', kimi: 'Kimi', rules: '兜底' };
-        target.textContent = names[provider] || 'Agent';
+        const value = String(provider || '');
+        if (value.includes('deepseek')) target.textContent = value.includes('cache') ? 'DeepSeek · 缓存' : 'DeepSeek';
+        else if (value.includes('kimi')) target.textContent = 'Kimi';
+        else if (value.includes('rules')) target.textContent = '兜底';
+        else target.textContent = 'Agent';
       };
 
       const setMerchantImage = (file) => {
@@ -2477,6 +2763,7 @@
           if (result.conversation_id) window.ShopCareAuth?.setConversation?.('merchant', result.conversation_id);
           merchantHistory.push({ role: 'assistant', content: answer });
           setMerchantProvider(result.llm_provider);
+          merchantKnowledge?.setHitCount(result.context_used?.knowledge_hits || 0);
           applyChartDirective(result.chart_directive || { focus: result.focus });
         } catch (error) {
           if (thinking) thinking.remove();
@@ -2587,6 +2874,7 @@
         setView('service');
         await ensureConversation('user');
         window.ShopCareServiceLoadMessages?.();
+        window.ShopCareServiceLoadKnowledge?.();
       };
 
       const showRole = () => {
@@ -2603,6 +2891,7 @@
         setView('merchant');
         await ensureConversation('merchant');
         window.ShopCareMerchantLoadMessages?.();
+        window.ShopCareMerchantLoadKnowledge?.();
       };
 
       const showLanding = () => {
