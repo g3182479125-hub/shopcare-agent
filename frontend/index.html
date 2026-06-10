@@ -1219,25 +1219,6 @@
     }
 
     .chart-controls button,
-    .merchant-quick-actions button {
-      flex: 0 0 auto;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
-      color: rgba(255, 255, 255, 0.72);
-      padding: 9px 12px;
-      font-size: 12px;
-      transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
-    }
-
-    .chart-controls button.active,
-    .chart-controls button:hover,
-    .merchant-quick-actions button:hover {
-      border-color: rgba(134, 239, 172, 0.36);
-      background: rgba(134, 239, 172, 0.14);
-      color: #fff;
-    }
-
     .primary-bars {
       display: none;
       margin-top: 22px;
@@ -1258,39 +1239,6 @@
       border-color: rgba(134, 239, 172, 0.42);
       box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(134, 239, 172, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
       transform: translateY(-2px);
-    }
-
-    .merchant-agent {
-      display: grid;
-      gap: 14px;
-      margin-top: 18px;
-      max-height: 190px;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-
-    .insight-card {
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.055);
-      padding: 14px;
-    }
-
-    .insight-card strong {
-      display: block;
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 14px;
-    }
-
-    .insight-card b {
-      display: inline-flex;
-      margin-top: 12px;
-      border-radius: 999px;
-      background: rgba(134, 239, 172, 0.14);
-      color: var(--green);
-      padding: 6px 10px;
-      font-size: 12px;
-      font-weight: 500;
     }
 
     .merchant-chat {
@@ -1314,18 +1262,15 @@
       scrollbar-width: thin;
     }
 
-    .merchant-messages::-webkit-scrollbar,
-    .merchant-agent::-webkit-scrollbar {
+    .merchant-messages::-webkit-scrollbar {
       width: 4px;
     }
 
-    .merchant-messages::-webkit-scrollbar-track,
-    .merchant-agent::-webkit-scrollbar-track {
+    .merchant-messages::-webkit-scrollbar-track-track {
       background: transparent;
     }
 
-    .merchant-messages::-webkit-scrollbar-thumb,
-    .merchant-agent::-webkit-scrollbar-thumb {
+    .merchant-messages::-webkit-scrollbar-thumb-thumb {
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.14);
     }
@@ -1358,14 +1303,6 @@
       background: rgba(255, 255, 255, 0.035);
       color: rgba(255, 255, 255, 0.58);
       font-size: 12px;
-    }
-
-    .merchant-quick-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
-      overflow-x: auto;
-      scrollbar-width: none;
     }
 
     .merchant-input {
@@ -1821,12 +1758,6 @@
               <span class="context-pill" id="merchantProvider">Agent</span>
             </div>
             <div class="merchant-messages" id="merchantMessages"></div>
-            <div class="merchant-agent" id="merchantInsights"></div>
-            <div class="merchant-quick-actions">
-              <button type="button" data-merchant-question="下周怎么做增长？">增长动作</button>
-              <button type="button" data-merchant-question="哪个类目最值得加投？">类目机会</button>
-              <button type="button" data-merchant-question="怎么降低售后压力？">售后压力</button>
-            </div>
             <div id="merchantPasteTray" class="paste-tray" hidden>
               <span>已添加图片，发送后将调用 Kimi 分析。</span>
               <button type="button" id="merchantClearImage">移除</button>
@@ -2707,11 +2638,6 @@
           trend.innerHTML = months.map((row) => `<i class="trend-bar" title="${row.month} ${formatMoney(row.gmv)}" style="height:${Math.max(8, (row.gmv / max) * 100)}%"></i>`).join('');
         }
 
-        const insights = document.getElementById('merchantInsights');
-        if (insights) {
-          insights.innerHTML = (data.agent_insights || []).map((item) => `<article class="insight-card"><strong>${item.title}</strong><p>${item.body}</p><b>${item.action}</b></article>`).join('');
-        }
-
         const messages = document.getElementById('merchantMessages');
         if (messages && !messages.dataset.ready) {
           messages.dataset.ready = 'true';
@@ -2785,9 +2711,6 @@
         const button = event.target.closest('button[data-chart]');
         if (!button) return;
         switchMerchantChart(button.dataset.chart);
-      });
-      document.querySelectorAll('[data-merchant-question]').forEach((button) => {
-        button.addEventListener('click', () => sendMerchantQuestion(button.dataset.merchantQuestion));
       });
       merchantUpload?.addEventListener('click', () => merchantFileInput?.click());
       merchantFileInput?.addEventListener('change', () => {

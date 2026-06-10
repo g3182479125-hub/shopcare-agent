@@ -19,24 +19,47 @@ REALTIME_SEARCH_KEYWORDS = {
     "competitor",
     "industry",
     "policy update",
-    "??",
-    "??",
-    "??",
-    "??",
-    "??",
-    "??",
-    "??",
-    "??",
-    "????",
-    "??",
+    "search",
+    "google",
+    "web",
+    "online",
+    "最新",
+    "今天",
+    "现在",
+    "实时",
+    "新闻",
+    "趋势",
+    "竞品",
+    "行业",
+    "政策更新",
+    "市场",
+    "搜索",
+    "上网",
+    "联网",
+    "搜一下",
+    "查一下",
+    "查查",
+    "全网",
+    "网上",
 }
+
+
+MERCHANT_SEARCH_KEYWORDS = {
+    "怎么增长",
+    "怎么降",
+    "投放",
+    "竞对",
+    "大盘",
+    "机会",
+}
+
 
 
 def needs_realtime_search(message: str, *, role: str = "user") -> bool:
     text = (message or "").lower()
     if any(keyword in text for keyword in REALTIME_SEARCH_KEYWORDS):
         return True
-    if role == "merchant" and any(word in text for word in ["????", "???", "??", "??", "??", "??"]):
+    if role == "merchant" and any(word in text for word in MERCHANT_SEARCH_KEYWORDS):
         return True
     return False
 
