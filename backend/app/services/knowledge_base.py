@@ -10,6 +10,7 @@ from collections import Counter
 from typing import Any
 
 from app.db import row_to_dict
+from app.services.vector_index import VectorSearchIndex
 
 
 SUPPORTED_TEXT_TYPES = {
@@ -133,8 +134,26 @@ class KnowledgeBase:
                 item["score"] = round(score, 4)
                 item["snippet"] = make_snippet(content, query_terms)
                 scored.append((score, item))
-        scored.sort(key=lambda pair: pair[0], reverse=True)
-        return [item for _, item in scored[:limit]]
+        vector_hits = VectorSearchIndex().search(
+            [dict(item, content=content) for item, _, content in chunk_vectors],
+            query,
+            limit=max(limit * 2, 8),
+        )
+        vector_by_id = {item.get("id"): item for item in vector_hits}
+        merged: dict[str, tuple[float, dict[str, Any]]] = {item["id"]: (score, item) for score, item in scored}
+        for item in vector_hits:
+            chunk_id = str(item.get("id") or "")
+            vector_score = float(item.get("vector_score") or 0)
+            current_score, current_item = merged.get(chunk_id, (0.0, item))
+            combined = current_score + vector_score * 3.0
+            current_item["vector_score"] = item.get("vector_score")
+            current_item["vector_backend"] = item.get("vector_backend")
+            if not current_item.get("snippet"):
+                current_item["snippet"] = make_snippet(str(current_item.get("content") or ""), query_terms)
+            current_item["score"] = round(combined, 4)
+            merged[chunk_id] = (combined, current_item)
+        ranked = sorted(merged.values(), key=lambda pair: pair[0], reverse=True)
+        return [item for _, item in ranked[:limit]]
 
 
 def normalize_role(role: str) -> str:

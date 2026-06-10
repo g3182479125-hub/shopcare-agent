@@ -22,15 +22,20 @@ from app.schemas import (
     ConversationUpdateRequest,
     DashboardSummary,
     DemoAuthRequest,
+    GraphQueryRequest,
     MerchantChatRequest,
     MerchantChatResponse,
 )
 from app.security import create_access_token, decode_access_token
 from app.services.account_service import AccountService
+from app.services.agent_run_store import AgentRunStore
 from app.services.conversation_store import ConversationStore
+from app.services.graph_rag import GraphRAGService
 from app.services.knowledge_base import KnowledgeBase
 from app.services.llm_cache import LLMCache
 from app.services.repository import ShopcareRepository
+from app.services.vector_index import vector_backend_status
+from app.services.web_search import WebSearchClient
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.2.0")
@@ -83,6 +88,9 @@ def llm_status() -> dict[str, Any]:
         "semantic_cache_threshold": settings.llm_semantic_cache_threshold,
         "semantic_cache_max_candidates": settings.llm_semantic_cache_max_candidates,
         "cache_stats": LLMCache(settings.llm_cache_ttl_seconds).stats(),
+        "web_search": WebSearchClient(settings).status(),
+        "knowledge_vector_index": vector_backend_status(),
+        "graph_rag": GraphRAGService(settings).status(),
         "profiles": {
             "chat": safe_profile(settings.llm_profile("chat")),
             "reason": safe_profile(settings.llm_profile("reason")),
@@ -231,6 +239,14 @@ async def chat(
             assistant_message=result.answer,
             payload=result.model_dump(),
         )
+        result.agent_run_id = _record_agent_run(
+            request=request,
+            conn=conn,
+            role="user",
+            workflow_name="shopcare_after_sales",
+            state={"message": message.strip(), "order_id": order_id, "has_image": bool(image_bytes)},
+            result=result.model_dump(),
+        )
         return result
 
 
@@ -252,6 +268,14 @@ async def chat_stream(request: Request, payload: ChatRequest) -> StreamingRespon
             user_message=payload.message.strip(),
             assistant_message=result.answer,
             payload=result.model_dump(),
+        )
+        result.agent_run_id = _record_agent_run(
+            request=request,
+            conn=conn,
+            role="user",
+            workflow_name="shopcare_after_sales_stream",
+            state={"message": payload.message.strip(), "order_id": payload.order_id, "has_image": False},
+            result=result.model_dump(),
         )
     return StreamingResponse(_sse_answer(result.answer, result.model_dump()), media_type="text/event-stream")
 
@@ -308,6 +332,14 @@ async def merchant_chat(
             assistant_message=result["answer"],
             payload=result,
         )
+        result["agent_run_id"] = _record_agent_run(
+            request=request,
+            conn=conn,
+            role="merchant",
+            workflow_name="merchant_analytics",
+            state={"message": (message or "").strip(), "has_image": bool(image_bytes), "focus": result.get("focus")},
+            result=result,
+        )
         return MerchantChatResponse(**result)
 
 
@@ -328,7 +360,44 @@ async def merchant_chat_stream(request: Request, payload: MerchantChatRequest) -
             assistant_message=result["answer"],
             payload=result,
         )
+        result["agent_run_id"] = _record_agent_run(
+            request=request,
+            conn=conn,
+            role="merchant",
+            workflow_name="merchant_analytics_stream",
+            state={"message": payload.message.strip(), "has_image": False, "focus": result.get("focus")},
+            result=result,
+        )
     return StreamingResponse(_sse_answer(result["answer"], result), media_type="text/event-stream")
+
+
+@app.get("/api/agent/runs")
+def list_agent_runs(request: Request, role: str | None = None, limit: int = 30) -> dict[str, Any]:
+    user = _current_user(request)
+    with get_connection() as conn:
+        return {"items": AgentRunStore(conn).list_for_user(user_id=user["id"], role=role, limit=limit)}
+
+
+@app.get("/api/agent/runs/{run_id}")
+def get_agent_run(request: Request, run_id: str) -> dict[str, Any]:
+    user = _current_user(request)
+    with get_connection() as conn:
+        run = AgentRunStore(conn).get(run_id, user_id=user["id"])
+        if not run:
+            raise HTTPException(status_code=404, detail="Agent run not found")
+        return run
+
+
+@app.post("/api/agent/runs/{run_id}/resume")
+def resume_agent_run(request: Request, run_id: str) -> dict[str, Any]:
+    user = _current_user(request)
+    with get_connection() as conn:
+        run = AgentRunStore(conn).get(run_id, user_id=user["id"])
+        if not run:
+            raise HTTPException(status_code=404, detail="Agent run not found")
+        if run.get("status") == "completed":
+            return {"status": "completed", "run": run}
+        return {"status": "resumable", "current_node": run.get("current_node"), "state": run.get("state"), "run": run}
 
 
 def _parse_history(raw: str | None) -> list[dict[str, str]]:
@@ -372,6 +441,28 @@ def _current_user(request: Request, *, required: bool = True) -> dict[str, Any] 
     if not user and required:
         raise HTTPException(status_code=401, detail="登录已失效")
     return user
+
+
+def _record_agent_run(
+    *,
+    request: Request,
+    conn,
+    role: str,
+    workflow_name: str,
+    state: dict[str, Any],
+    result: dict[str, Any],
+) -> str | None:
+    user = _current_user(request, required=False)
+    if not user:
+        return None
+    run = AgentRunStore(conn).record_completed(
+        user_id=user["id"],
+        role=role,
+        workflow_name=workflow_name,
+        state=state,
+        result=result,
+    )
+    return run.get("id")
 
 
 def _persist_exchange(
@@ -460,6 +551,30 @@ def search_knowledge(request: Request, q: str, role: str | None = None, limit: i
         raise HTTPException(status_code=403, detail="Cannot search another role's knowledge documents")
     with get_connection() as conn:
         return {"items": KnowledgeBase(conn).search(role=selected_role, query=q, limit=max(1, min(limit, 10)))}
+
+
+@app.get("/api/graph/status")
+def graph_status() -> dict[str, Any]:
+    return GraphRAGService(settings).status()
+
+
+@app.post("/api/graph/query")
+def graph_query(request: Request, payload: GraphQueryRequest) -> dict[str, Any]:
+    user = _current_user(request)
+    if payload.role != user["role"]:
+        raise HTTPException(status_code=403, detail="Graph role must match your current role")
+    with get_connection() as conn:
+        return GraphRAGService(settings, conn).query(
+            question=payload.question,
+            role=payload.role,
+            limit=payload.limit,
+        )
+
+
+@app.get("/api/search")
+def web_search(request: Request, q: str, limit: int = 5) -> dict[str, Any]:
+    _current_user(request)
+    return WebSearchClient(settings).search(q, max_results=max(1, min(limit, 10)))
 
 
 @app.delete("/api/knowledge/documents/{document_id}")

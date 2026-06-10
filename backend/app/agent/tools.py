@@ -7,6 +7,7 @@ from typing import Any, Callable
 from app.agent.policy import PolicyRAG
 from app.schemas import ToolTrace
 from app.services.repository import ShopcareRepository
+from app.services.web_search import WebSearchClient
 
 
 INTENT_KEYWORDS = {
@@ -70,6 +71,17 @@ class ShopcareTools:
 
     def search_policy(self, query: str) -> list[dict[str, Any]]:
         return self.call("PolicyRAGTool", {"query": query}, lambda: self.policy_rag.search(query), label="政策 RAG 检索")
+
+    def search_web(self, query: str, *, max_results: int | None = None) -> list[dict[str, Any]]:
+        from app.config import get_settings
+
+        result = self.call(
+            "WebSearchTool",
+            {"query": query, "max_results": max_results},
+            lambda: WebSearchClient(get_settings()).search(query, max_results=max_results),
+            label="Web search",
+        )
+        return result.get("items", []) if isinstance(result, dict) else []
 
     def decide(self, *, message: str, intent: str, order: dict[str, Any] | None, user: dict[str, Any] | None, policy_hits: list[dict[str, Any]]) -> dict[str, Any]:
         return self.call(

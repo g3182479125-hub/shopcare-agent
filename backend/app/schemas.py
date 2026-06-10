@@ -30,6 +30,7 @@ class MerchantChatResponse(BaseModel):
     focus: str
     chart_directive: dict[str, Any]
     conversation_id: Optional[str] = None
+    agent_run_id: Optional[str] = None
     image_analysis: Optional[dict[str, Any]] = None
     llm_used: bool = False
     llm_provider: Optional[str] = None
@@ -51,6 +52,7 @@ class ChatResponse(BaseModel):
     intent: str
     decision: dict[str, Any]
     conversation_id: Optional[str] = None
+    agent_run_id: Optional[str] = None
     order: Optional[dict[str, Any]] = None
     user_profile: Optional[dict[str, Any]] = None
     similar_cases: list[dict[str, Any]] = Field(default_factory=list)
@@ -59,6 +61,12 @@ class ChatResponse(BaseModel):
     llm_used: bool = False
     llm_provider: Optional[str] = None
     image_analysis: Optional[dict[str, Any]] = None
+
+
+class GraphQueryRequest(BaseModel):
+    question: str
+    role: str = "merchant"
+    limit: int = 8
 
 
 class DashboardSummary(BaseModel):

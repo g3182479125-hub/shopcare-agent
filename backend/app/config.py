@@ -66,6 +66,22 @@ class Settings:
         self.auth_secret = get("AUTH_SECRET", get("SECRET_KEY", "shopcare-local-dev-secret"))
         self.auth_token_expires_seconds = int(get("AUTH_TOKEN_EXPIRES_SECONDS", str(60 * 60 * 24 * 7)))
 
+        self.web_search_enabled = get("WEB_SEARCH_ENABLED", "false").lower() in {"1", "true", "yes", "on"}
+        self.web_search_provider = get("WEB_SEARCH_PROVIDER", "serpapi")
+        self.web_search_api_key = get("WEB_SEARCH_API_KEY", get("SERPAPI_API_KEY", ""))
+        self.web_search_base_url = get("WEB_SEARCH_BASE_URL", "https://serpapi.com/search.json")
+        self.web_search_timeout_seconds = float(get("WEB_SEARCH_TIMEOUT_SECONDS", "8") or "8")
+        self.web_search_max_results = int(get("WEB_SEARCH_MAX_RESULTS", "5") or "5")
+        self.knowledge_vector_provider = get("KNOWLEDGE_VECTOR_PROVIDER", "auto")
+        self.knowledge_vector_dimensions = int(get("KNOWLEDGE_VECTOR_DIMENSIONS", "384") or "384")
+
+        self.graph_rag_enabled = get("GRAPH_RAG_ENABLED", "true").lower() not in {"0", "false", "no", "off"}
+        self.neo4j_uri = get("NEO4J_URI", "")
+        self.neo4j_user = get("NEO4J_USER", "neo4j")
+        self.neo4j_password = get("NEO4J_PASSWORD", "")
+        self.neo4j_database = get("NEO4J_DATABASE", "neo4j")
+        self.graph_query_timeout_seconds = float(get("GRAPH_QUERY_TIMEOUT_SECONDS", "6") or "6")
+
         self.allow_origins = get(
             "ALLOW_ORIGINS",
             get("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"),

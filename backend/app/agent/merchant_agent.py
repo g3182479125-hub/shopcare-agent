@@ -11,7 +11,9 @@ import httpx
 
 from app.agent.llm import OptionalLLMClient
 from app.config import Settings
+from app.services.graph_rag import GraphRAGService
 from app.services.knowledge_base import KnowledgeBase
+from app.services.web_search import WebSearchClient, needs_realtime_search
 
 
 MERCHANT_SYSTEM_PROMPT = """你是 ShopCare Merchant 的商家数据分析 Agent。
@@ -73,6 +75,8 @@ class MerchantAnalyticsAgent:
 
         focus = detect_focus(message, image_analysis)
         knowledge_hits = self._search_knowledge(message=message, history=history, focus=focus)
+        web_hits = self._search_web(message=message, history=history, focus=focus)
+        graph_context = self._query_graph(message=message, focus=focus)
         fallback = fallback_answer(message=message, data=self.data, focus=focus, image_analysis=image_analysis)
         answer = self._deepseek_answer(
             message=message,
@@ -80,6 +84,8 @@ class MerchantAnalyticsAgent:
             focus=focus,
             image_analysis=image_analysis,
             knowledge_hits=knowledge_hits,
+            web_hits=web_hits,
+            graph_context=graph_context,
         ) or fallback
         meta = self.text_llm.last_meta
         chart_directive = build_chart_directive(focus, self.data)
@@ -96,6 +102,8 @@ class MerchantAnalyticsAgent:
                 "has_image": bool(image_analysis),
                 "data_generated_at": self.data.get("generated_at"),
                 "knowledge_hits": len(knowledge_hits),
+                "web_hits": len(web_hits),
+                "graph_hits": len(graph_context.get("items", [])),
             },
         }
 
@@ -105,6 +113,17 @@ class MerchantAnalyticsAgent:
         query = " ".join([message, focus, " ".join(item.get("content", "") for item in history[-4:])])
         return KnowledgeBase(self.conn).search(role="merchant", query=query, limit=4)
 
+    def _query_graph(self, *, message: str, focus: str) -> dict[str, Any]:
+        if self.conn is None:
+            return {"items": [], "status": "no_connection"}
+        return GraphRAGService(self.settings, self.conn).query(question=" ".join([message, focus]), role="merchant", limit=6)
+
+    def _search_web(self, *, message: str, history: list[dict[str, str]], focus: str) -> list[dict[str, Any]]:
+        query = " ".join([message, focus, " ".join(item.get("content", "") for item in history[-4:])])
+        if not needs_realtime_search(query, role="merchant"):
+            return []
+        return WebSearchClient(self.settings).search(query, max_results=4).get("items", [])
+
     def _deepseek_answer(
         self,
         *,
@@ -113,6 +132,8 @@ class MerchantAnalyticsAgent:
         focus: str,
         image_analysis: dict[str, Any] | None,
         knowledge_hits: list[dict[str, Any]],
+        web_hits: list[dict[str, Any]],
+        graph_context: dict[str, Any],
     ) -> str | None:
         if not self.text_llm.enabled:
             return None
@@ -123,6 +144,8 @@ class MerchantAnalyticsAgent:
             "image_analysis": image_analysis,
             "merchant_data": compact_merchant_data(self.data),
             "knowledge_hits": knowledge_hits,
+            "web_hits": web_hits,
+            "graph_context": graph_context,
         }
         return self.text_llm.complete(
             system=MERCHANT_SYSTEM_PROMPT,

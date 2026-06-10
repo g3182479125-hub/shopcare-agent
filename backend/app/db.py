@@ -201,6 +201,23 @@ def init_schema(conn: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS idx_knowledge_documents_user_role ON knowledge_documents(user_id, role, created_at);
         CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_role ON knowledge_chunks(role, document_id);
+
+        CREATE TABLE IF NOT EXISTS agent_workflow_runs (
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            role TEXT NOT NULL CHECK(role IN ('user', 'merchant', 'system')),
+            workflow_name TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'running',
+            current_node TEXT NOT NULL DEFAULT 'start',
+            state TEXT NOT NULL DEFAULT '{}',
+            result TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES app_users(id) ON DELETE SET NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_agent_workflow_runs_user ON agent_workflow_runs(user_id, role, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_agent_workflow_runs_status ON agent_workflow_runs(status, updated_at);
         """
     )
     _ensure_columns(

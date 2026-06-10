@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.schemas import ChatResponse, ToolTrace
 from app.services.knowledge_base import KnowledgeBase
 from app.services.repository import ShopcareRepository
+from app.services.web_search import needs_realtime_search
 
 
 class ShopCareAgent:
@@ -94,6 +95,7 @@ class ShopCareAgent:
             summary=f"{len(knowledge_hits)} chunks",
         )
         similar_cases = tools.search_cases(query=" ".join([message, history_text]), category=category) if order else tools.search_cases(query=message, category=None)
+        web_hits = tools.search_web(policy_query, max_results=3) if needs_realtime_search(policy_query, role="user") else []
         decision = tools.decide(message=message, intent=intent, order=order, user=user, policy_hits=policy_hits)
         decision, guardrails = validate_decision(order=order, decision=decision)
         tools.record_trace(
@@ -141,6 +143,7 @@ class ShopCareAgent:
                 context_summary=context_snapshot["summary"],
                 agent_plan=plan,
                 knowledge_hits=knowledge_hits,
+                web_hits=web_hits,
             )
             if llm_answer:
                 meta = self.text_llm.last_meta
