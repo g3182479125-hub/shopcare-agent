@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import csv
+import math
 import io
 import re
 import sqlite3
 import uuid
+from collections import Counter
 from typing import Any
 
 from app.db import row_to_dict
@@ -16,8 +18,9 @@ SUPPORTED_TEXT_TYPES = {
     "text/csv",
     "application/json",
     "application/x-ndjson",
+    "application/pdf",
 }
-MAX_KNOWLEDGE_BYTES = 2 * 1024 * 1024
+MAX_KNOWLEDGE_BYTES = 5 * 1024 * 1024
 CHUNK_SIZE = 900
 CHUNK_OVERLAP = 120
 
@@ -38,7 +41,7 @@ class KnowledgeBase:
     ) -> dict[str, Any]:
         role = normalize_role(role)
         if len(content_bytes) > MAX_KNOWLEDGE_BYTES:
-            raise ValueError("File must be under 2MB for this lightweight knowledge base.")
+            raise ValueError("File must be under 5MB for this knowledge base.")
         text = extract_text(content_bytes=content_bytes, source_name=source_name, mime_type=mime_type)
         if not text.strip():
             raise ValueError("No readable text found in this file.")
@@ -93,7 +96,8 @@ class KnowledgeBase:
         query = (query or "").strip()
         if not query:
             return []
-        terms = tokenize(query)
+        query_terms = tokenize(query)
+        query_vector = term_vector(query_terms)
         rows = self.conn.execute(
             """
             SELECT c.id, c.document_id, c.chunk_index, c.content, d.title, d.source_name, d.created_at
@@ -106,13 +110,28 @@ class KnowledgeBase:
             [normalize_role(role)],
         ).fetchall()
         scored: list[tuple[float, dict[str, Any]]] = []
+        chunk_vectors: list[tuple[dict[str, Any], Counter[str], str]] = []
         for row in rows:
             item = row_to_dict(row)
             content = str(item.get("content") or "")
-            score = score_text(content, query, terms)
+            content_terms = tokenize(content)
+            chunk_vectors.append((item, term_vector(content_terms), content))
+
+        doc_freq = document_frequency([vector for _, vector, _ in chunk_vectors])
+        total_docs = max(len(chunk_vectors), 1)
+        for item, content_vector, content in chunk_vectors:
+            score = score_text(
+                content=content,
+                query=query,
+                query_terms=query_terms,
+                query_vector=query_vector,
+                content_vector=content_vector,
+                doc_freq=doc_freq,
+                total_docs=total_docs,
+            )
             if score > 0:
                 item["score"] = round(score, 4)
-                item["snippet"] = make_snippet(content, terms)
+                item["snippet"] = make_snippet(content, query_terms)
                 scored.append((score, item))
         scored.sort(key=lambda pair: pair[0], reverse=True)
         return [item for _, item in scored[:limit]]
@@ -126,10 +145,10 @@ def normalize_role(role: str) -> str:
 
 def extract_text(*, content_bytes: bytes, source_name: str, mime_type: str) -> str:
     lowered = source_name.lower()
-    if lowered.endswith(".pdf"):
-        raise ValueError("PDF parsing is not enabled yet. Please upload txt, md, csv, or json.")
+    if lowered.endswith(".pdf") or mime_type == "application/pdf":
+        return pdf_to_text(content_bytes)
     if not (mime_type in SUPPORTED_TEXT_TYPES or lowered.endswith((".txt", ".md", ".csv", ".json", ".ndjson"))):
-        raise ValueError("Only txt, md, csv, and json files are supported now.")
+        raise ValueError("Only txt, md, csv, json, and pdf files are supported now.")
 
     text = decode_text(content_bytes)
     if lowered.endswith(".csv") or mime_type == "text/csv":
@@ -159,6 +178,31 @@ def csv_to_text(text: str) -> str:
     return "\n".join(lines) or text
 
 
+def pdf_to_text(content_bytes: bytes) -> str:
+    try:
+        from pypdf import PdfReader
+    except ImportError as exc:
+        raise ValueError("PDF parsing dependency is not installed.") from exc
+
+    try:
+        reader = PdfReader(io.BytesIO(content_bytes))
+    except Exception as exc:
+        raise ValueError("PDF could not be opened.") from exc
+
+    lines: list[str] = []
+    for index, page in enumerate(reader.pages[:80]):
+        try:
+            page_text = page.extract_text() or ""
+        except Exception:
+            page_text = ""
+        if page_text.strip():
+            lines.append(f"[Page {index + 1}]\n{page_text.strip()}")
+    text = "\n\n".join(lines)
+    if not text.strip():
+        raise ValueError("No selectable text found in this PDF.")
+    return text
+
+
 def split_text(text: str) -> list[str]:
     clean = re.sub(r"\n{3,}", "\n\n", text.strip())
     if len(clean) <= CHUNK_SIZE:
@@ -179,23 +223,69 @@ def split_text(text: str) -> list[str]:
 def tokenize(text: str) -> list[str]:
     lower = text.lower()
     words = re.findall(r"[a-z0-9_]{2,}|[\u4e00-\u9fff]{2,}", lower)
-    tokens: set[str] = set(words)
+    tokens: list[str] = []
     for word in words:
+        tokens.append(word)
         if re.fullmatch(r"[\u4e00-\u9fff]+", word) and len(word) > 2:
-            tokens.update(word[index : index + 2] for index in range(len(word) - 1))
+            tokens.extend(word[index : index + 2] for index in range(len(word) - 1))
     return [token for token in tokens if token.strip()]
 
 
-def score_text(content: str, query: str, terms: list[str]) -> float:
+def term_vector(terms: list[str]) -> Counter[str]:
+    return Counter(terms)
+
+
+def document_frequency(vectors: list[Counter[str]]) -> Counter[str]:
+    freq: Counter[str] = Counter()
+    for vector in vectors:
+        freq.update(vector.keys())
+    return freq
+
+
+def score_text(
+    *,
+    content: str,
+    query: str,
+    query_terms: list[str],
+    query_vector: Counter[str],
+    content_vector: Counter[str],
+    doc_freq: Counter[str],
+    total_docs: int,
+) -> float:
     lower = content.lower()
     score = 0.0
     if query and query.lower() in lower:
         score += 4.0
-    for term in terms:
+    for term in query_terms:
         count = lower.count(term)
         if count:
             score += min(count, 5) * (1.0 if len(term) <= 2 else 1.4)
+    score += 6.0 * tfidf_cosine(query_vector, content_vector, doc_freq, total_docs)
     return score
+
+
+def tfidf_cosine(
+    left: Counter[str],
+    right: Counter[str],
+    doc_freq: Counter[str],
+    total_docs: int,
+) -> float:
+    if not left or not right:
+        return 0.0
+    shared = set(left) & set(right)
+    if not shared:
+        return 0.0
+
+    def weight(term: str, count: int) -> float:
+        idf = math.log((1 + total_docs) / (1 + doc_freq.get(term, 0))) + 1.0
+        return (1.0 + math.log(count)) * idf
+
+    numerator = sum(weight(term, left[term]) * weight(term, right[term]) for term in shared)
+    left_norm = math.sqrt(sum(weight(term, count) ** 2 for term, count in left.items()))
+    right_norm = math.sqrt(sum(weight(term, count) ** 2 for term, count in right.items()))
+    if not left_norm or not right_norm:
+        return 0.0
+    return numerator / (left_norm * right_norm)
 
 
 def make_snippet(content: str, terms: list[str], size: int = 180) -> str:
