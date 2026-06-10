@@ -72,6 +72,19 @@ def health() -> dict[str, str]:
     return {"status": "ok", "app": settings.app_name}
 
 
+@app.get("/api/llm/status")
+def llm_status() -> dict[str, Any]:
+    return {
+        "cache_enabled": settings.llm_cache_enabled,
+        "cache_ttl_seconds": settings.llm_cache_ttl_seconds,
+        "profiles": {
+            "chat": safe_profile(settings.llm_profile("chat")),
+            "reason": safe_profile(settings.llm_profile("reason")),
+            "agent": safe_profile(settings.llm_profile("agent")),
+        },
+    }
+
+
 @app.post("/api/auth/register", response_model=AuthResponse)
 def register(payload: AuthRequest) -> AuthResponse:
     with get_connection() as conn:
@@ -386,6 +399,15 @@ async def _sse_answer(answer: str, payload: dict[str, Any]):
 
 def _chunk_text(text: str, size: int = 8) -> list[str]:
     return [text[index : index + size] for index in range(0, len(text), size)] or [""]
+
+
+def safe_profile(profile: dict[str, str]) -> dict[str, str]:
+    return {
+        "provider": profile.get("provider", ""),
+        "base_url": profile.get("base_url", ""),
+        "model": profile.get("model", ""),
+        "configured": "yes" if profile.get("api_key") else "no",
+    }
 
 
 @app.get("/api/orders/{order_id}")

@@ -45,7 +45,7 @@ MERCHANT_IMAGE_SYSTEM_PROMPT = """你是商家经营分析场景的图片理解 
 class MerchantAnalyticsAgent:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.text_llm = OptionalLLMClient(settings)
+        self.text_llm = OptionalLLMClient(settings, profile="agent")
         self.data = load_merchant_analytics()
 
     async def run(
@@ -76,6 +76,7 @@ class MerchantAnalyticsAgent:
             focus=focus,
             image_analysis=image_analysis,
         ) or fallback
+        meta = self.text_llm.last_meta
         chart_directive = build_chart_directive(focus, self.data)
 
         return {
@@ -84,7 +85,7 @@ class MerchantAnalyticsAgent:
             "chart_directive": chart_directive,
             "image_analysis": image_analysis,
             "llm_used": bool(answer != fallback) or image_llm_used,
-            "llm_provider": "deepseek" if answer != fallback else ("kimi" if image_llm_used else "rules"),
+            "llm_provider": f"{meta['provider']}:{meta['model']}:{meta['source']}" if answer != fallback else ("kimi" if image_llm_used else "rules"),
             "context_used": {
                 "history_turns": len(history),
                 "has_image": bool(image_analysis),

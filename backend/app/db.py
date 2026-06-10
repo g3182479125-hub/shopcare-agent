@@ -155,6 +155,22 @@ def init_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_app_users_email ON app_users(email);
         CREATE INDEX IF NOT EXISTS idx_app_conversations_user ON app_conversations(user_id, role, updated_at);
         CREATE INDEX IF NOT EXISTS idx_app_messages_conversation ON app_messages(conversation_id, created_at);
+
+        CREATE TABLE IF NOT EXISTS app_llm_cache (
+            cache_key TEXT PRIMARY KEY,
+            profile TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            model TEXT NOT NULL,
+            system_hash TEXT NOT NULL,
+            user_hash TEXT NOT NULL,
+            response TEXT NOT NULL,
+            hit_count INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            expires_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_app_llm_cache_expires ON app_llm_cache(expires_at);
         """
     )
     conn.commit()

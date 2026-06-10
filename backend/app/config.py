@@ -40,6 +40,21 @@ class Settings:
         self.llm_model = get("LLM_MODEL", "deepseek-chat")
         self.llm_temperature = float(get("LLM_TEMPERATURE", "0.7") or "0.7")
         self.llm_timeout_seconds = float(get("LLM_TIMEOUT_SECONDS", "6") or "6")
+        self.llm_cache_enabled = get("LLM_CACHE_ENABLED", "true").lower() not in {"0", "false", "no"}
+        self.llm_cache_ttl_seconds = int(get("LLM_CACHE_TTL_SECONDS", str(60 * 60 * 24)) or str(60 * 60 * 24))
+
+        self.llm_chat_provider = get("LLM_CHAT_PROVIDER", self.llm_provider)
+        self.llm_chat_model = get("LLM_CHAT_MODEL", self.llm_model)
+        self.llm_reason_provider = get("LLM_REASON_PROVIDER", self.llm_provider)
+        self.llm_reason_model = get("LLM_REASON_MODEL", get("LLM_DEEP_THINK_MODEL", self.llm_model))
+        self.llm_agent_provider = get("LLM_AGENT_PROVIDER", self.llm_provider)
+        self.llm_agent_model = get("LLM_AGENT_MODEL", self.llm_model)
+
+        self.ollama_base_url = get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        self.ollama_api_key = get("OLLAMA_API_KEY", "ollama")
+        self.ollama_chat_model = get("OLLAMA_CHAT_MODEL", "qwen2.5:7b")
+        self.ollama_reason_model = get("OLLAMA_REASON_MODEL", "deepseek-r1:7b")
+        self.ollama_agent_model = get("OLLAMA_AGENT_MODEL", self.ollama_chat_model)
 
         self.kimi_api_key = get("KIMI_API_KEY")
         self.kimi_base_url = get("KIMI_BASE_URL", "https://api.moonshot.cn/v1")
@@ -63,6 +78,37 @@ class Settings:
     @property
     def cors_origins(self) -> List[str]:
         return [item.strip() for item in self.allow_origins.split(",") if item.strip()]
+
+    def llm_profile(self, profile: str = "agent") -> dict[str, str]:
+        clean = (profile or "agent").lower()
+        provider = {
+            "chat": self.llm_chat_provider,
+            "reason": self.llm_reason_provider,
+            "agent": self.llm_agent_provider,
+        }.get(clean, self.llm_agent_provider)
+        model = {
+            "chat": self.llm_chat_model,
+            "reason": self.llm_reason_model,
+            "agent": self.llm_agent_model,
+        }.get(clean, self.llm_agent_model)
+        if provider.lower() == "ollama":
+            model = {
+                "chat": self.ollama_chat_model,
+                "reason": self.ollama_reason_model,
+                "agent": self.ollama_agent_model,
+            }.get(clean, model)
+            return {
+                "provider": "ollama",
+                "api_key": self.ollama_api_key,
+                "base_url": self.ollama_base_url,
+                "model": model,
+            }
+        return {
+            "provider": provider,
+            "api_key": self.llm_api_key,
+            "base_url": self.llm_base_url,
+            "model": model,
+        }
 
 
 @lru_cache(maxsize=1)

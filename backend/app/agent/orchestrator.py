@@ -17,7 +17,7 @@ class ShopCareAgent:
     def __init__(self, repository: ShopcareRepository) -> None:
         self.repository = repository
         self.settings = get_settings()
-        self.text_llm = OptionalLLMClient(self.settings)
+        self.text_llm = OptionalLLMClient(self.settings, profile="agent")
 
     async def run(
         self,
@@ -133,7 +133,8 @@ class ShopCareAgent:
                 agent_plan=plan,
             )
             if llm_answer:
-                llm_provider = self.settings.llm_provider or "deepseek"
+                meta = self.text_llm.last_meta
+                llm_provider = f"{meta['provider']}:{meta['model']}:{meta['source']}"
 
         final_answer = llm_answer or fallback_answer
         conversation_memory.append(session_id, role="user", content=message)
