@@ -45,6 +45,8 @@ class Settings:
         self.kimi_base_url = get("KIMI_BASE_URL", "https://api.moonshot.cn/v1")
         self.kimi_model = get("KIMI_MODEL", "moonshot-v1-8k-vision-preview")
         self.kimi_timeout_seconds = float(get("KIMI_TIMEOUT_SECONDS", "6") or "6")
+        self.auth_secret = get("AUTH_SECRET", get("SECRET_KEY", "shopcare-local-dev-secret"))
+        self.auth_token_expires_seconds = int(get("AUTH_TOKEN_EXPIRES_SECONDS", str(60 * 60 * 24 * 7)))
 
         self.allow_origins = get(
             "ALLOW_ORIGINS",

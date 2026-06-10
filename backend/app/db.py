@@ -120,6 +120,41 @@ def init_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_cases_reason ON aftersales_cases(reason_code);
         CREATE INDEX IF NOT EXISTS idx_cases_category ON aftersales_cases(category);
         CREATE INDEX IF NOT EXISTS idx_cases_priority ON aftersales_cases(priority);
+
+        CREATE TABLE IF NOT EXISTS app_users (
+            id TEXT PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            username TEXT NOT NULL,
+            role TEXT NOT NULL CHECK(role IN ('user', 'merchant')),
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_login TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS app_conversations (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            role TEXT NOT NULL CHECK(role IN ('user', 'merchant')),
+            title TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES app_users(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS app_messages (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL,
+            sender TEXT NOT NULL CHECK(sender IN ('user', 'assistant', 'system')),
+            content TEXT NOT NULL,
+            payload TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(conversation_id) REFERENCES app_conversations(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_app_users_email ON app_users(email);
+        CREATE INDEX IF NOT EXISTS idx_app_conversations_user ON app_conversations(user_id, role, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_app_messages_conversation ON app_messages(conversation_id, created_at);
         """
     )
     conn.commit()

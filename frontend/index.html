@@ -876,6 +876,56 @@
       font-weight: 600;
     }
 
+    .auth-form {
+      width: 100%;
+      display: grid;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .auth-form input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      padding: 12px 14px;
+      outline: 0;
+    }
+
+    .auth-form input::placeholder {
+      color: rgba(255, 255, 255, 0.36);
+    }
+
+    .auth-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .auth-actions button,
+    .demo-login {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.84);
+      padding: 11px 12px;
+    }
+
+    .auth-actions button:first-child,
+    .demo-login {
+      border: 0;
+      background: rgba(255, 255, 255, 0.92);
+      color: #101418;
+      font-weight: 600;
+    }
+
+    .auth-message {
+      min-height: 18px;
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 12px;
+    }
+
     .merchant-page {
       width: min(1720px, calc(100% - 32px));
       min-height: 100vh;
@@ -1336,22 +1386,42 @@
         <h1 class="role-title">你想进入哪一侧工作台？</h1>
         <p class="role-copy">安心购现在分成两条链路：消费者处理售后，商家查看经营与售后数据。先选身份，系统会把你带到对应的 Agent 页面。</p>
         <div class="role-cards">
-          <button class="role-card" type="button" data-login-role="user">
+          <section class="role-card">
             <span class="role-icon"><iconify-icon icon="solar:chat-round-like-bold-duotone" style="font-size:32px;"></iconify-icon></span>
             <span>
               <h2>用户登录</h2>
               <p>进入售后客服中心，继续处理退款、换货、物流异常、图片凭证和人工转接。</p>
             </span>
-            <span>进入售后咨询 <iconify-icon icon="solar:arrow-right-up-linear"></iconify-icon></span>
-          </button>
-          <button class="role-card" type="button" data-login-role="merchant">
+            <form class="auth-form" data-auth-form="user">
+              <input name="email" type="email" placeholder="邮箱，例如 customer@shopcare.demo" autocomplete="email" />
+              <input name="password" type="password" placeholder="密码，至少 6 位" autocomplete="current-password" />
+              <input name="username" type="text" placeholder="注册时可填昵称" autocomplete="nickname" />
+              <div class="auth-actions">
+                <button type="submit" data-auth-action="login">登录</button>
+                <button type="submit" data-auth-action="register">注册</button>
+              </div>
+              <button class="demo-login" type="button" data-demo-login="user">一键体验用户端</button>
+              <div class="auth-message" data-auth-message="user"></div>
+            </form>
+          </section>
+          <section class="role-card">
             <span class="role-icon"><iconify-icon icon="solar:chart-2-bold-duotone" style="font-size:32px;"></iconify-icon></span>
             <span>
               <h2>商家登录</h2>
               <p>进入经营分析 Agent，看订单、GMV、类目、用户、履约和增长建议。</p>
             </span>
-            <span>进入数据分析 <iconify-icon icon="solar:arrow-right-up-linear"></iconify-icon></span>
-          </button>
+            <form class="auth-form" data-auth-form="merchant">
+              <input name="email" type="email" placeholder="邮箱，例如 merchant@shopcare.demo" autocomplete="email" />
+              <input name="password" type="password" placeholder="密码，至少 6 位" autocomplete="current-password" />
+              <input name="username" type="text" placeholder="注册时可填店铺名" autocomplete="organization" />
+              <div class="auth-actions">
+                <button type="submit" data-auth-action="login">登录</button>
+                <button type="submit" data-auth-action="register">注册</button>
+              </div>
+              <button class="demo-login" type="button" data-demo-login="merchant">一键体验商家端</button>
+              <div class="auth-message" data-auth-message="merchant"></div>
+            </form>
+          </section>
         </div>
       </section>
     </main>
@@ -1728,6 +1798,8 @@
       const API_BASE = 'https://shopcare-agent-api.vercel.app';
       const ORDER_ID = '3000029';
       const conversationHistory = [];
+      const authHeaders = () => window.ShopCareAuth?.authHeaders?.() || {};
+      const activeConversationId = () => window.ShopCareAuth?.getConversation?.('user') || null;
 
       const callAgentApi = async (value, imageFile) => {
         const history = conversationHistory.slice(-10);
@@ -1737,15 +1809,18 @@
           form.append('message', value);
           form.append('order_id', ORDER_ID);
           form.append('session_id', 'web-demo-session');
+          form.append('conversation_id', activeConversationId() || '');
           form.append('conversation_history', JSON.stringify(history));
           form.append('image', imageFile, imageFile.name || 'pasted-image.png');
+          options.headers = authHeaders();
           options.body = form;
         } else {
-          options.headers = { 'Content-Type': 'application/json' };
+          options.headers = { 'Content-Type': 'application/json', ...authHeaders() };
           options.body = JSON.stringify({
             message: value,
             order_id: ORDER_ID,
             session_id: 'web-demo-session',
+            conversation_id: activeConversationId(),
             conversation_history: history,
           });
         }
@@ -1754,6 +1829,64 @@
           throw new Error(`API ${response.status}`);
         }
         return response.json();
+      };
+
+      const callAgentStream = async (value, onDelta) => {
+        const response = await fetch(`${API_BASE}/api/agent/chat/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({
+            message: value,
+            order_id: ORDER_ID,
+            session_id: 'web-demo-session',
+            conversation_id: activeConversationId(),
+            conversation_history: conversationHistory.slice(-10),
+          }),
+        });
+        if (!response.ok || !response.body) throw new Error(`API ${response.status}`);
+        return readSseStream(response, onDelta);
+      };
+
+      const readSseStream = async (response, onDelta) => {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalPayload = null;
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
+          parts.forEach((part) => {
+            const line = part.split('\n').find((item) => item.startsWith('data:'));
+            if (!line) return;
+            const event = JSON.parse(line.slice(5).trim());
+            if (event.type === 'delta') onDelta(event.content || '');
+            if (event.type === 'done') finalPayload = event.payload;
+          });
+        }
+        return finalPayload || {};
+      };
+
+      window.ShopCareServiceLoadMessages = async () => {
+        const conversationId = activeConversationId();
+        if (!conversationId || !window.ShopCareAuth?.getToken?.()) return;
+        try {
+          const response = await fetch(`${API_BASE}/api/conversations/${conversationId}/messages`, { headers: authHeaders() });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (!Array.isArray(data.items) || !data.items.length) return;
+          messages.innerHTML = '';
+          conversationHistory.length = 0;
+          data.items.slice(-20).forEach((item) => {
+            const role = item.sender === 'assistant' ? 'ai' : 'user';
+            addMessage(role, item.content);
+            conversationHistory.push({ role: item.sender === 'assistant' ? 'assistant' : 'user', content: item.content });
+          });
+        } catch (error) {
+          console.warn('load conversation failed', error);
+        }
       };
 
       const addThinking = () => {
@@ -1791,9 +1924,23 @@
         sendButton.disabled = true;
         const thinking = addThinking();
         try {
-          const data = await callAgentApi(value, imageToSend);
-          thinking.remove();
-          const answer = data.answer || replyFor(value);
+          let data;
+          let streamText = '';
+          const bubble = thinking.querySelector('.bubble');
+          if (!imageToSend) {
+            if (bubble) bubble.textContent = '';
+            data = await callAgentStream(value, (delta) => {
+              streamText += delta;
+              if (bubble) bubble.textContent = withEmoji(streamText);
+              scrollChat();
+            });
+            thinking.remove();
+          } else {
+            data = await callAgentApi(value, imageToSend);
+            thinking.remove();
+          }
+          if (data.conversation_id) window.ShopCareAuth?.setConversation?.('user', data.conversation_id);
+          const answer = data.answer || streamText || replyFor(value);
           addMessage('ai', answer);
           conversationHistory.push({ role: 'assistant', content: answer });
         } catch (error) {
@@ -1983,6 +2130,8 @@
       let activeMerchantChart = 'monthly';
       let merchantHistory = [];
       let merchantImage = null;
+      const merchantAuthHeaders = () => window.ShopCareAuth?.authHeaders?.() || {};
+      const activeMerchantConversationId = () => window.ShopCareAuth?.getConversation?.('merchant') || null;
 
       const renderBars = (id, rows, options = {}) => {
         const target = document.getElementById(id);
@@ -2158,24 +2307,81 @@
           const form = new FormData();
           form.append('message', message);
           form.append('session_id', 'merchant-web-session');
+          form.append('conversation_id', activeMerchantConversationId() || '');
           form.append('conversation_history', JSON.stringify(history));
           form.append('image', imageFile);
-          const response = await fetch(`${MERCHANT_API_BASE}/api/merchant/agent/chat`, { method: 'POST', body: form });
+          const response = await fetch(`${MERCHANT_API_BASE}/api/merchant/agent/chat`, { method: 'POST', headers: merchantAuthHeaders(), body: form });
           if (!response.ok) throw new Error(`Merchant agent failed: ${response.status}`);
           return response.json();
         }
 
         const response = await fetch(`${MERCHANT_API_BASE}/api/merchant/agent/chat`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...merchantAuthHeaders() },
           body: JSON.stringify({
             message,
             session_id: 'merchant-web-session',
+            conversation_id: activeMerchantConversationId(),
             conversation_history: history,
           }),
         });
         if (!response.ok) throw new Error(`Merchant agent failed: ${response.status}`);
         return response.json();
+      };
+
+      const callMerchantAgentStream = async (message, onDelta) => {
+        const response = await fetch(`${MERCHANT_API_BASE}/api/merchant/agent/chat/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...merchantAuthHeaders() },
+          body: JSON.stringify({
+            message,
+            session_id: 'merchant-web-session',
+            conversation_id: activeMerchantConversationId(),
+            conversation_history: merchantHistory.slice(-12),
+          }),
+        });
+        if (!response.ok || !response.body) throw new Error(`Merchant agent failed: ${response.status}`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalPayload = null;
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
+          parts.forEach((part) => {
+            const line = part.split('\n').find((item) => item.startsWith('data:'));
+            if (!line) return;
+            const event = JSON.parse(line.slice(5).trim());
+            if (event.type === 'delta') onDelta(event.content || '');
+            if (event.type === 'done') finalPayload = event.payload;
+          });
+        }
+        return finalPayload || {};
+      };
+
+      window.ShopCareMerchantLoadMessages = async () => {
+        const conversationId = activeMerchantConversationId();
+        if (!conversationId || !window.ShopCareAuth?.getToken?.()) return;
+        try {
+          const response = await fetch(`${MERCHANT_API_BASE}/api/conversations/${conversationId}/messages`, { headers: merchantAuthHeaders() });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (!Array.isArray(data.items) || !data.items.length) return;
+          const target = document.getElementById('merchantMessages');
+          if (!target) return;
+          target.innerHTML = '';
+          target.dataset.ready = 'true';
+          merchantHistory = [];
+          data.items.slice(-20).forEach((item) => {
+            addMerchantMessage(item.sender === 'assistant' ? 'ai' : 'user', item.content);
+            merchantHistory.push({ role: item.sender === 'assistant' ? 'assistant' : 'user', content: item.content });
+          });
+        } catch (error) {
+          console.warn('load merchant conversation failed', error);
+        }
       };
 
       const renderMerchant = (data) => {
@@ -2252,10 +2458,23 @@
         clearMerchantImage();
         const thinking = addMerchantMessage('ai', '我在结合数据和上下文看一下...', { thinking: true });
         try {
-          const result = await callMerchantAgent(value, imageToSend);
-          if (thinking) thinking.remove();
-          const answer = result.answer || merchantFallbackAnswer(value);
+          let result;
+          let streamText = '';
+          if (!imageToSend) {
+            result = await callMerchantAgentStream(value, (delta) => {
+              streamText += delta;
+              if (thinking) thinking.textContent = withAgentEmoji(streamText);
+              const target = document.getElementById('merchantMessages');
+              if (target) target.scrollTop = target.scrollHeight;
+            });
+            if (thinking) thinking.remove();
+          } else {
+            result = await callMerchantAgent(value, imageToSend);
+            if (thinking) thinking.remove();
+          }
+          const answer = result.answer || streamText || merchantFallbackAnswer(value);
           addMerchantMessage('ai', answer);
+          if (result.conversation_id) window.ShopCareAuth?.setConversation?.('merchant', result.conversation_id);
           merchantHistory.push({ role: 'assistant', content: answer });
           setMerchantProvider(result.llm_provider);
           applyChartDirective(result.chart_directive || { focus: result.focus });
@@ -2304,10 +2523,48 @@
 
   <script>
     (() => {
+      const API_BASE = 'https://shopcare-agent-api.vercel.app';
       const landingFrame = document.getElementById('landingFrame');
       const roleGateway = document.getElementById('roleGateway');
       const serviceApp = document.getElementById('serviceApp');
       const merchantApp = document.getElementById('merchantApp');
+      const AUTH_KEY = 'shopcare_auth';
+      const CONV_KEYS = {
+        user: 'shopcare_user_conversation_id',
+        merchant: 'shopcare_merchant_conversation_id',
+      };
+
+      const getAuth = () => {
+        try {
+          return JSON.parse(window.localStorage.getItem(AUTH_KEY) || 'null');
+        } catch {
+          return null;
+        }
+      };
+
+      const setAuth = (auth) => {
+        window.localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+      };
+
+      const authHeaders = () => {
+        const auth = getAuth();
+        return auth?.access_token ? { Authorization: `Bearer ${auth.access_token}` } : {};
+      };
+
+      const setMessage = (role, text) => {
+        const target = document.querySelector(`[data-auth-message="${role}"]`);
+        if (target) target.textContent = text || '';
+      };
+
+      window.ShopCareAuth = {
+        getToken: () => getAuth()?.access_token || '',
+        getUser: () => getAuth()?.user || null,
+        authHeaders,
+        getConversation: (role) => window.localStorage.getItem(CONV_KEYS[role] || ''),
+        setConversation: (role, id) => {
+          if (id && CONV_KEYS[role]) window.localStorage.setItem(CONV_KEYS[role], id);
+        },
+      };
 
       const hideApps = () => {
         landingFrame.hidden = true;
@@ -2323,11 +2580,13 @@
         window.history.replaceState({}, '', url);
       };
 
-      const showService = () => {
+      const showService = async () => {
         hideApps();
         serviceApp.hidden = false;
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
         setView('service');
+        await ensureConversation('user');
+        window.ShopCareServiceLoadMessages?.();
       };
 
       const showRole = () => {
@@ -2337,11 +2596,13 @@
         setView('login');
       };
 
-      const showMerchant = () => {
+      const showMerchant = async () => {
         hideApps();
         merchantApp.hidden = false;
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
         setView('merchant');
+        await ensureConversation('merchant');
+        window.ShopCareMerchantLoadMessages?.();
       };
 
       const showLanding = () => {
@@ -2352,24 +2613,111 @@
         document.body.classList.add('show-landing');
       };
 
-      document.querySelectorAll('[data-login-role="user"]').forEach((node) => {
-        node.addEventListener('click', showService);
+      const ensureConversation = async (role) => {
+        if (!getAuth()?.access_token) return null;
+        const existing = window.ShopCareAuth.getConversation(role);
+        if (existing) return existing;
+        const list = await fetch(`${API_BASE}/api/conversations?role=${role}`, { headers: authHeaders() });
+        if (list.ok) {
+          const data = await list.json();
+          const first = data.items?.[0];
+          if (first?.id) {
+            window.ShopCareAuth.setConversation(role, first.id);
+            return first.id;
+          }
+        }
+        const created = await fetch(`${API_BASE}/api/conversations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ role }),
+        });
+        if (created.ok) {
+          const data = await created.json();
+          window.ShopCareAuth.setConversation(role, data.id);
+          return data.id;
+        }
+        return null;
+      };
+
+      const enterRole = async (role) => {
+        const auth = getAuth();
+        if (!auth?.access_token || auth.user?.role !== role) {
+          showRole();
+          setMessage(role, '请先登录这个身份。');
+          return;
+        }
+        if (role === 'merchant') {
+          await showMerchant();
+        } else {
+          await showService();
+        }
+      };
+
+      const submitAuth = async (role, action, form) => {
+        setMessage(role, '正在处理...');
+        const payload = {
+          role,
+          email: form.email.value.trim(),
+          password: form.password.value,
+          username: form.username.value.trim(),
+        };
+        try {
+          const response = await fetch(`${API_BASE}/api/auth/${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.detail || '登录失败');
+          setAuth(data);
+          setMessage(role, '登录成功，正在进入工作台...');
+          await enterRole(role);
+        } catch (error) {
+          setMessage(role, error.message || '登录失败');
+        }
+      };
+
+      document.querySelectorAll('[data-auth-form]').forEach((form) => {
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+          const role = form.dataset.authForm;
+          const action = event.submitter?.dataset.authAction || 'login';
+          submitAuth(role, action, form);
+        });
       });
-      document.querySelectorAll('[data-login-role="merchant"]').forEach((node) => {
-        node.addEventListener('click', showMerchant);
+
+      document.querySelectorAll('[data-demo-login]').forEach((node) => {
+        node.addEventListener('click', async () => {
+          const role = node.dataset.demoLogin;
+          setMessage(role, '正在创建体验账号...');
+          try {
+            const response = await fetch(`${API_BASE}/api/auth/demo`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ role }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || '体验账号登录失败');
+            setAuth(data);
+            setMessage(role, '已登录体验账号。');
+            await enterRole(role);
+          } catch (error) {
+            setMessage(role, error.message || '体验账号登录失败');
+          }
+        });
       });
       document.querySelectorAll('[data-open-login]').forEach((node) => {
         node.addEventListener('click', showRole);
       });
       document.querySelectorAll('[data-open-service]').forEach((node) => {
-        node.addEventListener('click', showService);
+        node.addEventListener('click', () => enterRole('user'));
       });
 
       const params = new URLSearchParams(window.location.search);
       if (params.get('view') === 'service' || window.location.hash === '#service') {
-        showService();
+        enterRole('user');
       } else if (params.get('view') === 'merchant' || window.location.hash === '#merchant') {
-        showMerchant();
+        enterRole('merchant');
       } else if (params.get('view') === 'login' || window.location.hash === '#login') {
         showRole();
       } else {

@@ -1,16 +1,33 @@
 from __future__ import annotations
 
 import json
+import asyncio
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from app.agent.merchant_agent import MerchantAnalyticsAgent
 from app.agent.orchestrator import ShopCareAgent
 from app.config import get_settings
 from app.db import ensure_database, get_connection
-from app.schemas import ChatRequest, ChatResponse, ConversationItem, DashboardSummary, MerchantChatRequest, MerchantChatResponse
+from app.schemas import (
+    AuthRequest,
+    AuthResponse,
+    ChatRequest,
+    ChatResponse,
+    ConversationCreateRequest,
+    ConversationItem,
+    ConversationUpdateRequest,
+    DashboardSummary,
+    DemoAuthRequest,
+    MerchantChatRequest,
+    MerchantChatResponse,
+)
+from app.security import create_access_token, decode_access_token
+from app.services.account_service import AccountService
+from app.services.conversation_store import ConversationStore
 from app.services.repository import ShopcareRepository
 
 settings = get_settings()
@@ -38,6 +55,13 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def request_logger(request: Request, call_next):
+    response = await call_next(request)
+    print(json.dumps({"path": request.url.path, "method": request.method, "status": response.status_code}, ensure_ascii=False))
+    return response
+
+
 @app.on_event("startup")
 def startup() -> None:
     ensure_database()
@@ -48,12 +72,97 @@ def health() -> dict[str, str]:
     return {"status": "ok", "app": settings.app_name}
 
 
+@app.post("/api/auth/register", response_model=AuthResponse)
+def register(payload: AuthRequest) -> AuthResponse:
+    with get_connection() as conn:
+        try:
+            user = AccountService(conn).create_user(
+                email=payload.email,
+                password=payload.password,
+                username=payload.username or "",
+                role=payload.role,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _auth_response(user)
+
+
+@app.post("/api/auth/login", response_model=AuthResponse)
+def login(payload: AuthRequest) -> AuthResponse:
+    with get_connection() as conn:
+        user = AccountService(conn).authenticate(email=payload.email, password=payload.password)
+        if not user or user["role"] != payload.role:
+            raise HTTPException(status_code=401, detail="邮箱、密码或身份不匹配")
+        return _auth_response(user)
+
+
+@app.post("/api/auth/demo", response_model=AuthResponse)
+def demo_login(payload: DemoAuthRequest) -> AuthResponse:
+    with get_connection() as conn:
+        try:
+            user, _ = AccountService(conn).ensure_demo_user(payload.role)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _auth_response(user)
+
+
+@app.get("/api/auth/me")
+def me(request: Request) -> dict[str, Any]:
+    return {"user": _current_user(request)}
+
+
+@app.post("/api/conversations")
+def create_conversation(request: Request, payload: ConversationCreateRequest) -> dict[str, Any]:
+    user = _current_user(request)
+    with get_connection() as conn:
+        return ConversationStore(conn).create(user_id=user["id"], role=payload.role, title=payload.title)
+
+
+@app.get("/api/conversations")
+def list_conversations(request: Request, role: str | None = None) -> dict[str, Any]:
+    user = _current_user(request)
+    with get_connection() as conn:
+        return {"items": ConversationStore(conn).list_for_user(user_id=user["id"], role=role)}
+
+
+@app.get("/api/conversations/{conversation_id}/messages")
+def list_conversation_messages(request: Request, conversation_id: str) -> dict[str, Any]:
+    user = _current_user(request)
+    with get_connection() as conn:
+        store = ConversationStore(conn)
+        conversation = store.get(conversation_id, user_id=user["id"])
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return {"conversation": conversation, "items": store.list_messages(conversation_id, user_id=user["id"])}
+
+
+@app.put("/api/conversations/{conversation_id}")
+def update_conversation(request: Request, conversation_id: str, payload: ConversationUpdateRequest) -> dict[str, Any]:
+    user = _current_user(request)
+    with get_connection() as conn:
+        conversation = ConversationStore(conn).update_title(conversation_id, user_id=user["id"], title=payload.title)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return conversation
+
+
+@app.delete("/api/conversations/{conversation_id}")
+def delete_conversation(request: Request, conversation_id: str) -> dict[str, bool]:
+    user = _current_user(request)
+    with get_connection() as conn:
+        ok = ConversationStore(conn).delete(conversation_id, user_id=user["id"])
+        if not ok:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return {"ok": True}
+
+
 @app.post("/api/agent/chat", response_model=ChatResponse)
 async def chat(
     request: Request,
     message: str | None = Form(default=None),
     order_id: str | None = Form(default=None),
     session_id: str | None = Form(default=None),
+    conversation_id: str | None = Form(default=None),
     conversation_history: str | None = Form(default=None),
     image: UploadFile | None = File(default=None),
 ) -> ChatResponse:
@@ -70,6 +179,7 @@ async def chat(
         message = payload.message
         order_id = payload.order_id
         session_id = payload.session_id
+        conversation_id = payload.conversation_id
         history_items = [item.model_dump() for item in payload.conversation_history[-12:]]
     else:
         if not message or not message.strip():
@@ -85,7 +195,7 @@ async def chat(
 
     with get_connection() as conn:
         agent = ShopCareAgent(ShopcareRepository(conn))
-        return await agent.run(
+        result = await agent.run(
             message=message.strip(),
             order_id=order_id,
             image_bytes=image_bytes,
@@ -93,6 +203,38 @@ async def chat(
             session_id=session_id,
             conversation_history=history_items,
         )
+        result.conversation_id = _persist_exchange(
+            request=request,
+            conn=conn,
+            role="user",
+            conversation_id=conversation_id,
+            user_message=message.strip() + ("（含图片）" if image_bytes else ""),
+            assistant_message=result.answer,
+            payload=result.model_dump(),
+        )
+        return result
+
+
+@app.post("/api/agent/chat/stream")
+async def chat_stream(request: Request, payload: ChatRequest) -> StreamingResponse:
+    with get_connection() as conn:
+        agent = ShopCareAgent(ShopcareRepository(conn))
+        result = await agent.run(
+            message=payload.message.strip(),
+            order_id=payload.order_id,
+            session_id=payload.session_id,
+            conversation_history=[item.model_dump() for item in payload.conversation_history[-12:]],
+        )
+        result.conversation_id = _persist_exchange(
+            request=request,
+            conn=conn,
+            role="user",
+            conversation_id=payload.conversation_id,
+            user_message=payload.message.strip(),
+            assistant_message=result.answer,
+            payload=result.model_dump(),
+        )
+    return StreamingResponse(_sse_answer(result.answer, result.model_dump()), media_type="text/event-stream")
 
 
 @app.post("/api/merchant/agent/chat", response_model=MerchantChatResponse)
@@ -100,6 +242,7 @@ async def merchant_chat(
     request: Request,
     message: str | None = Form(default=None),
     session_id: str | None = Form(default=None),
+    conversation_id: str | None = Form(default=None),
     conversation_history: str | None = Form(default=None),
     image: UploadFile | None = File(default=None),
 ) -> MerchantChatResponse:
@@ -115,6 +258,7 @@ async def merchant_chat(
             raise HTTPException(status_code=400, detail=f"Invalid JSON payload: {exc}") from exc
         message = payload.message
         session_id = payload.session_id
+        conversation_id = payload.conversation_id
         history_items = [item.model_dump() for item in payload.conversation_history[-12:]]
     else:
         if not message or not message.strip():
@@ -128,14 +272,44 @@ async def merchant_chat(
             if len(image_bytes) > 5 * 1024 * 1024:
                 raise HTTPException(status_code=400, detail="Image must be under 5MB")
 
-    agent = MerchantAnalyticsAgent(settings)
-    result = await agent.run(
-        message=(message or "").strip(),
-        conversation_history=history_items,
-        image_bytes=image_bytes,
-        image_type=image_type,
-    )
-    return MerchantChatResponse(**result)
+    with get_connection() as conn:
+        agent = MerchantAnalyticsAgent(settings)
+        result = await agent.run(
+            message=(message or "").strip(),
+            conversation_history=history_items,
+            image_bytes=image_bytes,
+            image_type=image_type,
+        )
+        result["conversation_id"] = _persist_exchange(
+            request=request,
+            conn=conn,
+            role="merchant",
+            conversation_id=conversation_id,
+            user_message=(message or "").strip() + ("（含图片）" if image_bytes else ""),
+            assistant_message=result["answer"],
+            payload=result,
+        )
+        return MerchantChatResponse(**result)
+
+
+@app.post("/api/merchant/agent/chat/stream")
+async def merchant_chat_stream(request: Request, payload: MerchantChatRequest) -> StreamingResponse:
+    with get_connection() as conn:
+        agent = MerchantAnalyticsAgent(settings)
+        result = await agent.run(
+            message=payload.message.strip(),
+            conversation_history=[item.model_dump() for item in payload.conversation_history[-12:]],
+        )
+        result["conversation_id"] = _persist_exchange(
+            request=request,
+            conn=conn,
+            role="merchant",
+            conversation_id=payload.conversation_id,
+            user_message=payload.message.strip(),
+            assistant_message=result["answer"],
+            payload=result,
+        )
+    return StreamingResponse(_sse_answer(result["answer"], result), media_type="text/event-stream")
 
 
 def _parse_history(raw: str | None) -> list[dict[str, str]]:
@@ -155,6 +329,63 @@ def _parse_history(raw: str | None) -> list[dict[str, str]]:
             continue
         items.append(model.model_dump())
     return items
+
+
+def _auth_response(user: dict[str, Any]) -> AuthResponse:
+    token = create_access_token(
+        {"sub": user["id"], "email": user["email"], "role": user["role"]},
+        secret=settings.auth_secret,
+        expires_in=settings.auth_token_expires_seconds,
+    )
+    return AuthResponse(access_token=token, user=user)
+
+
+def _current_user(request: Request, *, required: bool = True) -> dict[str, Any] | None:
+    raw = request.headers.get("authorization", "")
+    token = raw.removeprefix("Bearer ").strip() if raw.lower().startswith("bearer ") else ""
+    payload = decode_access_token(token, secret=settings.auth_secret) if token else None
+    if not payload:
+        if required:
+            raise HTTPException(status_code=401, detail="请先登录")
+        return None
+    with get_connection() as conn:
+        user = AccountService(conn).get_user(str(payload.get("sub") or ""))
+    if not user and required:
+        raise HTTPException(status_code=401, detail="登录已失效")
+    return user
+
+
+def _persist_exchange(
+    *,
+    request: Request,
+    conn,
+    role: str,
+    conversation_id: str | None,
+    user_message: str,
+    assistant_message: str,
+    payload: dict[str, Any],
+) -> str | None:
+    user = _current_user(request, required=False)
+    if not user:
+        return conversation_id
+    store = ConversationStore(conn)
+    conversation = store.get(conversation_id or "", user_id=user["id"]) if conversation_id else None
+    if not conversation:
+        conversation = store.create(user_id=user["id"], role=role, title=user_message[:28] or None)
+    store.append_message(conversation_id=conversation["id"], user_id=user["id"], sender="user", content=user_message)
+    store.append_message(conversation_id=conversation["id"], user_id=user["id"], sender="assistant", content=assistant_message, payload=payload)
+    return conversation["id"]
+
+
+async def _sse_answer(answer: str, payload: dict[str, Any]):
+    for chunk in _chunk_text(answer):
+        yield f"data: {json.dumps({'type': 'delta', 'content': chunk}, ensure_ascii=False)}\n\n"
+        await asyncio.sleep(0.018)
+    yield f"data: {json.dumps({'type': 'done', 'payload': payload}, ensure_ascii=False)}\n\n"
+
+
+def _chunk_text(text: str, size: int = 8) -> list[str]:
+    return [text[index : index + size] for index in range(0, len(text), size)] or [""]
 
 
 @app.get("/api/orders/{order_id}")

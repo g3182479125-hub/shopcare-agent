@@ -14,12 +14,14 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     order_id: Optional[str] = None
     session_id: Optional[str] = None
+    conversation_id: Optional[str] = None
     conversation_history: list[ConversationItem] = Field(default_factory=list)
 
 
 class MerchantChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     session_id: Optional[str] = None
+    conversation_id: Optional[str] = None
     conversation_history: list[ConversationItem] = Field(default_factory=list)
 
 
@@ -27,6 +29,7 @@ class MerchantChatResponse(BaseModel):
     answer: str
     focus: str
     chart_directive: dict[str, Any]
+    conversation_id: Optional[str] = None
     image_analysis: Optional[dict[str, Any]] = None
     llm_used: bool = False
     llm_provider: Optional[str] = None
@@ -47,6 +50,7 @@ class ChatResponse(BaseModel):
     answer: str
     intent: str
     decision: dict[str, Any]
+    conversation_id: Optional[str] = None
     order: Optional[dict[str, Any]] = None
     user_profile: Optional[dict[str, Any]] = None
     similar_cases: list[dict[str, Any]] = Field(default_factory=list)
@@ -61,3 +65,29 @@ class DashboardSummary(BaseModel):
     orders: dict[str, Any]
     users: dict[str, Any]
     aftersales: dict[str, Any]
+
+
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+    username: Optional[str] = None
+    role: str = "user"
+
+
+class DemoAuthRequest(BaseModel):
+    role: str = "user"
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: dict[str, Any]
+
+
+class ConversationCreateRequest(BaseModel):
+    role: str = "user"
+    title: Optional[str] = None
+
+
+class ConversationUpdateRequest(BaseModel):
+    title: str
