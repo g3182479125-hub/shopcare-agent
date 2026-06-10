@@ -916,9 +916,22 @@
 
     .merchant-grid {
       display: grid;
-      grid-template-columns: 320px minmax(0, 1fr) 360px;
+      grid-template-columns: minmax(0, 1fr) 430px;
       gap: 22px;
       align-items: start;
+    }
+
+    .merchant-workspace {
+      min-width: 0;
+    }
+
+    .merchant-agent-panel {
+      position: sticky;
+      top: 18px;
+      height: calc(100vh - 40px);
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     .merchant-stack {
@@ -1014,11 +1027,11 @@
     }
 
     .trend-panel {
-      min-height: 260px;
+      min-height: 420px;
     }
 
     .trend-chart {
-      height: 190px;
+      height: 240px;
       display: flex;
       align-items: end;
       gap: 8px;
@@ -1034,10 +1047,67 @@
       background: linear-gradient(180deg, rgba(134, 239, 172, 0.8), rgba(134, 239, 172, 0.16));
     }
 
+    .chart-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 18px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .chart-controls::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chart-controls button,
+    .merchant-quick-actions button {
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.72);
+      padding: 9px 12px;
+      font-size: 12px;
+      transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+    }
+
+    .chart-controls button.active,
+    .chart-controls button:hover,
+    .merchant-quick-actions button:hover {
+      border-color: rgba(134, 239, 172, 0.36);
+      background: rgba(134, 239, 172, 0.14);
+      color: #fff;
+    }
+
+    .primary-bars {
+      display: none;
+      margin-top: 22px;
+    }
+
+    .merchant-subgrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .merchant-focus-card {
+      transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+
+    .merchant-focus-card.is-focused {
+      border-color: rgba(134, 239, 172, 0.42);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(134, 239, 172, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+
     .merchant-agent {
       display: grid;
       gap: 14px;
       margin-top: 18px;
+      max-height: 190px;
+      overflow-y: auto;
+      padding-right: 4px;
     }
 
     .insight-card {
@@ -1065,18 +1135,40 @@
     }
 
     .merchant-chat {
-      min-height: 360px;
+      flex: 1;
+      min-height: 0;
       display: grid;
       grid-template-rows: auto 1fr auto;
+      background:
+        radial-gradient(circle at 50% 22%, rgba(255, 255, 255, 0.045), transparent 34%),
+        rgba(13, 17, 23, 0.88);
     }
 
     .merchant-messages {
-      display: grid;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
       gap: 12px;
-      align-content: start;
       margin-top: 16px;
-      padding-right: 4px;
+      padding: 12px 4px 12px 0;
       overflow-y: auto;
+      scrollbar-width: thin;
+    }
+
+    .merchant-messages::-webkit-scrollbar,
+    .merchant-agent::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .merchant-messages::-webkit-scrollbar-track,
+    .merchant-agent::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .merchant-messages::-webkit-scrollbar-thumb,
+    .merchant-agent::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
     }
 
     .merchant-message {
@@ -1091,13 +1183,35 @@
     }
 
     .merchant-message.user {
+      margin-left: auto;
       justify-self: end;
       background: rgba(134, 239, 172, 0.12);
     }
 
+    .merchant-message.thinking {
+      color: rgba(255, 255, 255, 0.62);
+    }
+
+    .merchant-message.system {
+      max-width: 100%;
+      align-self: center;
+      border-style: dashed;
+      background: rgba(255, 255, 255, 0.035);
+      color: rgba(255, 255, 255, 0.58);
+      font-size: 12px;
+    }
+
+    .merchant-quick-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
     .merchant-input {
       display: grid;
-      grid-template-columns: 1fr 42px;
+      grid-template-columns: 1fr 42px 42px;
       gap: 10px;
       margin-top: 16px;
     }
@@ -1143,6 +1257,15 @@
 
       .merchant-topbar h1 {
         justify-self: start;
+      }
+
+      .merchant-agent-panel {
+        position: static;
+        height: auto;
+      }
+
+      .merchant-subgrid {
+        grid-template-columns: 1fr;
       }
 
       .page {
@@ -1439,66 +1562,85 @@
       </nav>
 
       <section class="merchant-grid">
-        <aside class="merchant-stack">
-          <section class="merchant-card">
-            <span class="merchant-eyebrow">Business Health</span>
-            <h2>经营健康度</h2>
-            <div class="merchant-bars" id="merchantHealthBars"></div>
-          </section>
-          <section class="merchant-card">
-            <h2>用户分层</h2>
-            <p>按全年消费金额和购买次数自动分层，用来判断复购和会员运营优先级。</p>
-            <div class="merchant-bars" id="merchantTiers"></div>
-          </section>
-          <section class="merchant-card">
-            <h2>注册渠道</h2>
-            <div class="merchant-bars" id="merchantChannels"></div>
-          </section>
-        </aside>
-
-        <section>
+        <section class="merchant-workspace">
           <div class="metric-grid" id="merchantMetrics"></div>
-          <section class="merchant-card trend-panel">
+          <section class="merchant-card trend-panel merchant-focus-card" data-chart-card="monthly">
             <div class="panel-head">
-              <h2>全年 GMV 趋势</h2>
-              <span class="context-pill">真实订单数据</span>
+              <div>
+                <h2 id="merchantPrimaryTitle">全年 GMV 趋势</h2>
+                <p id="merchantTrendCopy">正在读取全年订单数据...</p>
+              </div>
+              <span class="context-pill" id="merchantFocusPill">真实订单数据</span>
             </div>
-            <p id="merchantTrendCopy">正在读取全年订单数据...</p>
+            <div class="chart-controls" id="merchantChartControls">
+              <button class="active" type="button" data-chart="monthly">GMV趋势</button>
+              <button type="button" data-chart="categories">类目</button>
+              <button type="button" data-chart="brands">品牌</button>
+              <button type="button" data-chart="cities">城市</button>
+              <button type="button" data-chart="tiers">用户</button>
+              <button type="button" data-chart="fulfillment">履约</button>
+              <button type="button" data-chart="channels">渠道</button>
+            </div>
             <div class="trend-chart" id="merchantTrend"></div>
+            <div class="merchant-bars primary-bars" id="merchantPrimaryBars"></div>
           </section>
-          <section class="merchant-card" style="margin-top:16px;">
-            <div class="panel-head">
-              <h2>类目经营表现</h2>
-              <span class="context-pill">GMV / 客单价 / 履约</span>
-            </div>
-            <div class="merchant-bars" id="merchantCategories"></div>
-          </section>
-          <section class="merchant-card" style="margin-top:16px;">
-            <div class="panel-head">
-              <h2>品牌与城市机会</h2>
-              <span class="context-pill">投放参考</span>
-            </div>
-            <div class="merchant-bars" id="merchantBrands"></div>
-            <div class="merchant-bars" id="merchantCities" style="margin-top:18px;"></div>
-          </section>
+          <div class="merchant-subgrid">
+            <section class="merchant-card merchant-focus-card" data-chart-card="categories">
+              <div class="panel-head">
+                <h2>类目经营表现</h2>
+                <span class="context-pill">GMV / 客单价 / 履约</span>
+              </div>
+              <div class="merchant-bars" id="merchantCategories"></div>
+            </section>
+            <section class="merchant-card merchant-focus-card" data-chart-card="brands">
+              <div class="panel-head">
+                <h2>品牌机会</h2>
+                <span class="context-pill">投放参考</span>
+              </div>
+              <div class="merchant-bars" id="merchantBrands"></div>
+            </section>
+            <section class="merchant-card merchant-focus-card" data-chart-card="cities">
+              <div class="panel-head">
+                <h2>城市机会</h2>
+                <span class="context-pill">区域投放</span>
+              </div>
+              <div class="merchant-bars" id="merchantCities"></div>
+            </section>
+            <section class="merchant-card merchant-focus-card" data-chart-card="users">
+              <div class="panel-head">
+                <h2>用户与渠道</h2>
+                <span class="context-pill">复购 / 转化</span>
+              </div>
+              <div class="merchant-bars" id="merchantTiers"></div>
+              <div class="merchant-bars" id="merchantChannels" style="margin-top:18px;"></div>
+            </section>
+          </div>
         </section>
 
-        <aside class="merchant-stack">
-          <section class="merchant-card">
-            <div class="panel-head">
-              <h2>Agent 建议</h2>
-              <span class="context-pill">可执行</span>
-            </div>
-            <div class="merchant-agent" id="merchantInsights"></div>
-          </section>
+        <aside class="merchant-agent-panel">
           <section class="merchant-card merchant-chat">
-            <div>
-              <h2>经营分析对话</h2>
-              <p>可以问：下周怎么做增长、哪个类目该补货、怎么降低售后压力。</p>
+            <div class="panel-head">
+              <div>
+                <h2>经营分析对话</h2>
+                <p>文本走 DeepSeek，图片先走 Kimi，再结合上下文和图表数据分析。</p>
+              </div>
+              <span class="context-pill" id="merchantProvider">Agent</span>
             </div>
             <div class="merchant-messages" id="merchantMessages"></div>
+            <div class="merchant-agent" id="merchantInsights"></div>
+            <div class="merchant-quick-actions">
+              <button type="button" data-merchant-question="下周怎么做增长？">增长动作</button>
+              <button type="button" data-merchant-question="哪个类目最值得加投？">类目机会</button>
+              <button type="button" data-merchant-question="怎么降低售后压力？">售后压力</button>
+            </div>
+            <div id="merchantPasteTray" class="paste-tray" hidden>
+              <span>已添加图片，发送后将调用 Kimi 分析。</span>
+              <button type="button" id="merchantClearImage">移除</button>
+            </div>
             <div class="merchant-input">
+              <input id="merchantFileInput" type="file" accept="image/*" hidden />
               <input id="merchantInput" placeholder="问问商家数据分析 Agent..." />
+              <button id="merchantUpload" type="button"><iconify-icon icon="solar:gallery-add-linear"></iconify-icon></button>
               <button id="merchantSend" type="button"><iconify-icon icon="solar:arrow-right-up-linear"></iconify-icon></button>
             </div>
           </section>
@@ -1815,7 +1957,32 @@
       const percent = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`;
       const clean = (value) => (value || '').replace(/\s+/g, ' ').trim();
 
+      const MERCHANT_API_BASE = 'https://shopcare-agent-api.vercel.app';
+      const FOCUS_TO_CHART = {
+        overview: 'monthly',
+        gmv: 'monthly',
+        category: 'categories',
+        brand: 'brands',
+        city: 'cities',
+        users: 'tiers',
+        fulfillment: 'fulfillment',
+        aftersales: 'fulfillment',
+        conversion: 'channels',
+      };
+      const CHART_LABELS = {
+        monthly: 'GMV趋势',
+        categories: '类目表现',
+        brands: '品牌机会',
+        cities: '城市投放',
+        tiers: '用户分层',
+        fulfillment: '履约时效',
+        channels: '渠道转化',
+      };
+
       let merchantData = null;
+      let activeMerchantChart = 'monthly';
+      let merchantHistory = [];
+      let merchantImage = null;
 
       const renderBars = (id, rows, options = {}) => {
         const target = document.getElementById(id);
@@ -1832,17 +1999,23 @@
         }).join('');
       };
 
-      const addMerchantMessage = (role, text) => {
+      const hasEmoji = (text) => /[📊📈💡✅⚠️🚀🎯]/.test(text || '');
+      const withAgentEmoji = (text) => (hasEmoji(text) ? text : `${text} 📊`);
+
+      const addMerchantMessage = (role, text, options = {}) => {
         const target = document.getElementById('merchantMessages');
         if (!target) return;
         const message = document.createElement('div');
         message.className = role === 'user' ? 'merchant-message user' : 'merchant-message';
-        message.textContent = role === 'user' ? text : `${text} 📊`;
+        if (options.thinking) message.classList.add('thinking');
+        if (role === 'system') message.className = 'merchant-message system';
+        message.textContent = role === 'ai' ? withAgentEmoji(text) : text;
         target.appendChild(message);
         target.scrollTop = target.scrollHeight;
+        return message;
       };
 
-      const merchantAnswer = (question) => {
+      const merchantFallbackAnswer = (question) => {
         if (!merchantData) return '数据还在加载，等我一下再问。';
         const q = clean(question);
         const topCategory = merchantData.categories?.[0];
@@ -1867,6 +2040,142 @@
           return `售后压力通常和履约、商品描述、图片凭证有关。建议把慢履约类目和高客单类目放进重点监控。`;
         }
         return merchantData.agent_replies?.[0] || '我会先看 GMV、客单价、履约和用户分层，再给你经营动作。';
+      };
+
+      const chartRowsFor = (chart) => {
+        if (!merchantData) return [];
+        if (chart === 'categories') return merchantData.categories || [];
+        if (chart === 'brands') return merchantData.brands || [];
+        if (chart === 'cities') return merchantData.cities || [];
+        if (chart === 'tiers') return merchantData.tiers || [];
+        if (chart === 'channels') return merchantData.channels || [];
+        if (chart === 'fulfillment') {
+          return [...(merchantData.categories || [])]
+            .sort((a, b) => Number(b.avg_fulfillment || 0) - Number(a.avg_fulfillment || 0))
+            .slice(0, 8);
+        }
+        return merchantData.monthly || [];
+      };
+
+      const chartCopyFor = (chart) => {
+        if (!merchantData) return '正在读取全年订单数据...';
+        const rows = chartRowsFor(chart);
+        const overview = merchantData.overview || {};
+        if (chart === 'monthly') {
+          const maxMonth = rows.reduce((best, row) => (row.gmv > (best?.gmv || 0) ? row : best), null);
+          return maxMonth ? `${maxMonth.month} 是全年峰值，GMV ${formatMoney(maxMonth.gmv)}，订单 ${formatNumber(maxMonth.orders)}。` : '全年 GMV 趋势已加载。';
+        }
+        if (chart === 'fulfillment') {
+          const slow = rows[0];
+          return slow ? `${slow.name} 履约最慢，平均 ${slow.avg_fulfillment} 小时，适合先做发货预警。` : '履约数据已加载。';
+        }
+        if (chart === 'tiers') {
+          return `全年用户 ${formatNumber(overview.users)}，平均购买 ${overview.avg_purchase_frequency} 次，重点看高价值和 VIP 人群。`;
+        }
+        if (chart === 'channels') {
+          const top = rows[0];
+          return top ? `${top.name} 是主要注册渠道，适合优先做转化链路复盘。` : '渠道数据已加载。';
+        }
+        const top = rows[0];
+        return top ? `${top.name} 当前排第一，GMV ${formatMoney(top.gmv || top.value)}。` : '图表数据已加载。';
+      };
+
+      const switchMerchantChart = (chart, focus = null) => {
+        if (!merchantData) {
+          activeMerchantChart = chart || 'monthly';
+          return;
+        }
+        const nextChart = chart || 'monthly';
+        activeMerchantChart = nextChart;
+        document.querySelectorAll('#merchantChartControls button').forEach((button) => {
+          button.classList.toggle('active', button.dataset.chart === nextChart);
+        });
+        document.querySelectorAll('.merchant-focus-card').forEach((card) => {
+          const key = card.dataset.chartCard;
+          const focused = key === nextChart || (nextChart === 'fulfillment' && key === 'categories') || ((nextChart === 'tiers' || nextChart === 'channels') && key === 'users');
+          card.classList.toggle('is-focused', focused);
+        });
+
+        const title = document.getElementById('merchantPrimaryTitle');
+        const copy = document.getElementById('merchantTrendCopy');
+        const pill = document.getElementById('merchantFocusPill');
+        const trend = document.getElementById('merchantTrend');
+        const primaryBars = document.getElementById('merchantPrimaryBars');
+        if (title) title.textContent = CHART_LABELS[nextChart] || '经营分析';
+        if (copy) copy.textContent = chartCopyFor(nextChart);
+        if (pill) pill.textContent = focus ? `Agent关注：${CHART_LABELS[nextChart] || focus}` : '真实订单数据';
+
+        if (nextChart === 'monthly') {
+          if (trend) trend.style.display = 'flex';
+          if (primaryBars) primaryBars.style.display = 'none';
+          return;
+        }
+
+        if (trend) trend.style.display = 'none';
+        if (primaryBars) primaryBars.style.display = 'grid';
+        if (nextChart === 'fulfillment') {
+          renderBars('merchantPrimaryBars', chartRowsFor(nextChart), { valueKey: 'avg_fulfillment', formatter: (value) => Number(value || 0).toFixed(1), suffix: 'h' });
+        } else if (nextChart === 'tiers' || nextChart === 'channels') {
+          renderBars('merchantPrimaryBars', chartRowsFor(nextChart));
+        } else {
+          renderBars('merchantPrimaryBars', chartRowsFor(nextChart), { valueKey: 'gmv', formatter: formatMoney });
+        }
+      };
+
+      const applyChartDirective = (directive = {}) => {
+        const focus = directive.focus || directive.suggested_focus || 'overview';
+        const chart = directive.chart || directive.chart_type || FOCUS_TO_CHART[focus] || activeMerchantChart;
+        switchMerchantChart(chart, focus);
+      };
+
+      const setMerchantProvider = (provider) => {
+        const target = document.getElementById('merchantProvider');
+        if (!target) return;
+        const names = { deepseek: 'DeepSeek', kimi: 'Kimi', rules: '兜底' };
+        target.textContent = names[provider] || 'Agent';
+      };
+
+      const setMerchantImage = (file) => {
+        if (!file || !file.type?.startsWith('image/')) return;
+        merchantImage = file;
+        const tray = document.getElementById('merchantPasteTray');
+        const label = tray?.querySelector('span');
+        if (label) label.textContent = `已添加图片：${file.name || '剪贴板图片'}，发送后先用 Kimi 分析。`;
+        if (tray) tray.hidden = false;
+      };
+
+      const clearMerchantImage = () => {
+        merchantImage = null;
+        const tray = document.getElementById('merchantPasteTray');
+        const input = document.getElementById('merchantFileInput');
+        if (tray) tray.hidden = true;
+        if (input) input.value = '';
+      };
+
+      const callMerchantAgent = async (message, imageFile) => {
+        const history = merchantHistory.slice(-12);
+        if (imageFile) {
+          const form = new FormData();
+          form.append('message', message);
+          form.append('session_id', 'merchant-web-session');
+          form.append('conversation_history', JSON.stringify(history));
+          form.append('image', imageFile);
+          const response = await fetch(`${MERCHANT_API_BASE}/api/merchant/agent/chat`, { method: 'POST', body: form });
+          if (!response.ok) throw new Error(`Merchant agent failed: ${response.status}`);
+          return response.json();
+        }
+
+        const response = await fetch(`${MERCHANT_API_BASE}/api/merchant/agent/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            session_id: 'merchant-web-session',
+            conversation_history: history,
+          }),
+        });
+        if (!response.ok) throw new Error(`Merchant agent failed: ${response.status}`);
+        return response.json();
       };
 
       const renderMerchant = (data) => {
@@ -1916,6 +2225,7 @@
           messages.dataset.ready = 'true';
           (data.agent_replies || []).slice(0, 2).forEach((text) => addMerchantMessage('ai', text));
         }
+        switchMerchantChart(activeMerchantChart);
       };
 
       fetch('/merchant_analytics.json')
@@ -1927,18 +2237,66 @@
 
       const merchantInput = document.getElementById('merchantInput');
       const merchantSend = document.getElementById('merchantSend');
-      const sendMerchantQuestion = () => {
-        const value = clean(merchantInput?.value || '');
+      const merchantUpload = document.getElementById('merchantUpload');
+      const merchantFileInput = document.getElementById('merchantFileInput');
+      const merchantClearImage = document.getElementById('merchantClearImage');
+      const merchantApp = document.getElementById('merchantApp');
+
+      const sendMerchantQuestion = async (preset = '') => {
+        const value = clean(preset || merchantInput?.value || (merchantImage ? '帮我分析这张图对经营有什么影响' : ''));
         if (!value) return;
+        const imageToSend = merchantImage;
         addMerchantMessage('user', value);
-        addMerchantMessage('ai', merchantAnswer(value));
+        merchantHistory.push({ role: 'user', content: imageToSend ? `${value}（含图片）` : value });
         merchantInput.value = '';
+        clearMerchantImage();
+        const thinking = addMerchantMessage('ai', '我在结合数据和上下文看一下...', { thinking: true });
+        try {
+          const result = await callMerchantAgent(value, imageToSend);
+          if (thinking) thinking.remove();
+          const answer = result.answer || merchantFallbackAnswer(value);
+          addMerchantMessage('ai', answer);
+          merchantHistory.push({ role: 'assistant', content: answer });
+          setMerchantProvider(result.llm_provider);
+          applyChartDirective(result.chart_directive || { focus: result.focus });
+        } catch (error) {
+          if (thinking) thinking.remove();
+          const answer = merchantFallbackAnswer(value);
+          addMerchantMessage('ai', `${answer} 线上 Agent 暂时没连上，我先用本地数据给你判断。`);
+          merchantHistory.push({ role: 'assistant', content: answer });
+          setMerchantProvider('rules');
+          applyChartDirective({ focus: 'overview' });
+        }
       };
-      merchantSend?.addEventListener('click', sendMerchantQuestion);
+      merchantSend?.addEventListener('click', () => sendMerchantQuestion());
       merchantInput?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
           sendMerchantQuestion();
+        }
+      });
+      document.getElementById('merchantChartControls')?.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-chart]');
+        if (!button) return;
+        switchMerchantChart(button.dataset.chart);
+      });
+      document.querySelectorAll('[data-merchant-question]').forEach((button) => {
+        button.addEventListener('click', () => sendMerchantQuestion(button.dataset.merchantQuestion));
+      });
+      merchantUpload?.addEventListener('click', () => merchantFileInput?.click());
+      merchantFileInput?.addEventListener('change', () => {
+        const file = merchantFileInput.files?.[0];
+        if (file) setMerchantImage(file);
+      });
+      merchantClearImage?.addEventListener('click', clearMerchantImage);
+      document.addEventListener('paste', (event) => {
+        if (merchantApp?.hidden) return;
+        const item = [...(event.clipboardData?.items || [])].find((entry) => entry.type.startsWith('image/'));
+        const file = item?.getAsFile();
+        if (file) {
+          event.preventDefault();
+          setMerchantImage(file);
+          addMerchantMessage('system', '图片已放进商家 Agent 输入区，发出去后会先走 Kimi。');
         }
       });
     })();

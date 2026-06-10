@@ -1,0 +1,367 @@
+{
+  "generated_at": "2026-06-10",
+  "overview": {
+    "orders": 382287,
+    "gmv": 656083534.77,
+    "users": 98673,
+    "buyers": 92404,
+    "aov": 1716.21,
+    "items": 477910,
+    "hot_product_gmv_share": 0.2626,
+    "avg_fulfillment_hours": 46.0,
+    "cart_rate": 0.3751,
+    "avg_purchase_frequency": 5.01,
+    "user_ltv": 1500.99
+  },
+  "monthly": [
+    {
+      "month": "2024-01",
+      "gmv": 2838383.66,
+      "orders": 1693
+    },
+    {
+      "month": "2024-02",
+      "gmv": 8559275.75,
+      "orders": 4951
+    },
+    {
+      "month": "2024-03",
+      "gmv": 15966035.16,
+      "orders": 8992
+    },
+    {
+      "month": "2024-04",
+      "gmv": 22638824.78,
+      "orders": 12832
+    },
+    {
+      "month": "2024-05",
+      "gmv": 32299709.4,
+      "orders": 18371
+    },
+    {
+      "month": "2024-06",
+      "gmv": 39356544.57,
+      "orders": 23007
+    },
+    {
+      "month": "2024-07",
+      "gmv": 52001388.76,
+      "orders": 29754
+    },
+    {
+      "month": "2024-08",
+      "gmv": 64595752.94,
+      "orders": 37875
+    },
+    {
+      "month": "2024-09",
+      "gmv": 77916660.48,
+      "orders": 45645
+    },
+    {
+      "month": "2024-10",
+      "gmv": 98218257.77,
+      "orders": 57868
+    },
+    {
+      "month": "2024-11",
+      "gmv": 114699691.28,
+      "orders": 67305
+    },
+    {
+      "month": "2024-12",
+      "gmv": 124711864.27,
+      "orders": 72464
+    },
+    {
+      "month": "2025-01",
+      "gmv": 2281145.95,
+      "orders": 1530
+    }
+  ],
+  "categories": [
+    {
+      "name": "3C电子",
+      "orders": 82734,
+      "gmv": 571353518.27,
+      "aov": 6905.91,
+      "avg_fulfillment": 45.9
+    },
+    {
+      "name": "服装鞋帽",
+      "orders": 68866,
+      "gmv": 35530297.49,
+      "aov": 515.93,
+      "avg_fulfillment": 45.9
+    },
+    {
+      "name": "美妆护肤",
+      "orders": 75793,
+      "gmv": 24893370.13,
+      "aov": 328.44,
+      "avg_fulfillment": 46.1
+    },
+    {
+      "name": "家居日用",
+      "orders": 70015,
+      "gmv": 13488178.47,
+      "aov": 192.65,
+      "avg_fulfillment": 45.7
+    },
+    {
+      "name": "食品生鲜",
+      "orders": 84879,
+      "gmv": 10818170.41,
+      "aov": 127.45,
+      "avg_fulfillment": 46.3
+    }
+  ],
+  "brands": [
+    {
+      "name": "小米",
+      "gmv": 232551701.55
+    },
+    {
+      "name": "Apple",
+      "gmv": 178322571.49
+    },
+    {
+      "name": "华为",
+      "gmv": 160479245.23
+    },
+    {
+      "name": "UNIQLO",
+      "gmv": 13966645.17
+    },
+    {
+      "name": "李宁",
+      "gmv": 12537728.18
+    },
+    {
+      "name": "花西子",
+      "gmv": 9991225.77
+    },
+    {
+      "name": "Nike",
+      "gmv": 9025924.14
+    },
+    {
+      "name": "完美日记",
+      "gmv": 7738685.05
+    }
+  ],
+  "products": [
+    {
+      "name": "小米 Xiaomi 14 Ultra",
+      "gmv": 82327356.65
+    },
+    {
+      "name": "小米 Xiaomi Book Air",
+      "gmv": 79964679.08
+    },
+    {
+      "name": "华为 Pura 70 Pro+",
+      "gmv": 77874852.97
+    },
+    {
+      "name": "小米 Redmi K70 Pro",
+      "gmv": 70259665.82
+    },
+    {
+      "name": "Apple iPad Air",
+      "gmv": 59229071.95
+    },
+    {
+      "name": "Apple MacBook Pro",
+      "gmv": 48782464.43
+    },
+    {
+      "name": "Apple AirPods Pro",
+      "gmv": 41672109.37
+    },
+    {
+      "name": "华为 Mate 60 Pro",
+      "gmv": 41478078.46
+    }
+  ],
+  "cities": [
+    {
+      "name": "上海市",
+      "gmv": 67039515.86
+    },
+    {
+      "name": "西安市",
+      "gmv": 66685931.54
+    },
+    {
+      "name": "深圳市",
+      "gmv": 66450509.69
+    },
+    {
+      "name": "杭州市",
+      "gmv": 65815572.55
+    },
+    {
+      "name": "广州市",
+      "gmv": 65535874.33
+    },
+    {
+      "name": "成都市",
+      "gmv": 65493725.39
+    },
+    {
+      "name": "武汉市",
+      "gmv": 65370819.77
+    },
+    {
+      "name": "天津市",
+      "gmv": 64944685.29
+    }
+  ],
+  "provinces": [
+    {
+      "name": "贵州省",
+      "gmv": 20344635.08
+    },
+    {
+      "name": "陕西省",
+      "gmv": 20281663.7
+    },
+    {
+      "name": "内蒙古自治区",
+      "gmv": 20270239.71
+    },
+    {
+      "name": "四川省",
+      "gmv": 20113529.38
+    },
+    {
+      "name": "山东省",
+      "gmv": 20062806.16
+    },
+    {
+      "name": "广东省",
+      "gmv": 20059457.19
+    },
+    {
+      "name": "辽宁省",
+      "gmv": 19816704.36
+    },
+    {
+      "name": "新疆维吾尔自治区",
+      "gmv": 19773192.93
+    }
+  ],
+  "payments": [
+    {
+      "name": "Alipay",
+      "value": 152749
+    },
+    {
+      "name": "WeChatPay",
+      "value": 133740
+    },
+    {
+      "name": "DebitCard",
+      "value": 38444
+    },
+    {
+      "name": "CreditCard",
+      "value": 38294
+    },
+    {
+      "name": "Cash",
+      "value": 19060
+    }
+  ],
+  "statuses": [
+    {
+      "name": "Delivered",
+      "value": 229104
+    },
+    {
+      "name": "Shipped",
+      "value": 76252
+    },
+    {
+      "name": "Paid",
+      "value": 38444
+    },
+    {
+      "name": "Cancelled",
+      "value": 19265
+    },
+    {
+      "name": "Pending",
+      "value": 19222
+    }
+  ],
+  "tiers": [
+    {
+      "name": "HighValue",
+      "value": 59270
+    },
+    {
+      "name": "Regular",
+      "value": 22108
+    },
+    {
+      "name": "VIP",
+      "value": 13294
+    },
+    {
+      "name": "New",
+      "value": 4001
+    }
+  ],
+  "channels": [
+    {
+      "name": "Android Market",
+      "value": 29679
+    },
+    {
+      "name": "App Store",
+      "value": 29470
+    },
+    {
+      "name": "WeChat",
+      "value": 19683
+    },
+    {
+      "name": "Web",
+      "value": 14842
+    },
+    {
+      "name": "Referral",
+      "value": 4999
+    }
+  ],
+  "agent_insights": [
+    {
+      "title": "3C电子 是当前主力盘",
+      "body": "贡献 GMV 571,353,518，客单价 6905.91。建议把首页资源位和直播讲解优先给这个类目。",
+      "action": "加大投放"
+    },
+    {
+      "title": "食品生鲜 履约偏慢",
+      "body": "平均履约 46.3 小时，容易拖累评价和售后。建议拆分仓配或提高预警阈值。",
+      "action": "优化履约"
+    },
+    {
+      "title": "2024-12 是全年销售峰值",
+      "body": "当月 GMV 124,711,864，订单 72,464。建议复盘当月活动和爆品组合。",
+      "action": "复盘活动"
+    },
+    {
+      "title": "加购到成交还有提升空间",
+      "body": "整体加购率约 37.5%，可用优惠券、包邮门槛和限时提醒提升转化。",
+      "action": "提升转化"
+    }
+  ],
+  "agent_replies": [
+    "我先看经营大盘：订单量和 GMV 很稳，当前重点是把高 GMV 类目继续放大，同时处理履约慢的类目。",
+    "如果你要下周经营动作，我建议先做三件事：主推高 GMV 类目、压缩慢履约链路、给高价值用户做复购券。",
+    "从数据看，商家端最该盯的是 GMV、客单价、履约时效和加购率，这四个指标能直接影响利润和售后压力。"
+  ]
+}

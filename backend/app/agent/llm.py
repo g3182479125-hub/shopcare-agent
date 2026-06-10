@@ -15,7 +15,11 @@ class OptionalLLMClient:
         if not self.enabled:
             return None
         if self._client is None:
-            from openai import OpenAI
+            try:
+                from openai import OpenAI
+            except ImportError:
+                self.enabled = False
+                return None
 
             kwargs: dict[str, Any] = {
                 "api_key": self.settings.llm_api_key,

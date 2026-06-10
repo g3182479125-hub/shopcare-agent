@@ -17,6 +17,22 @@ class ChatRequest(BaseModel):
     conversation_history: list[ConversationItem] = Field(default_factory=list)
 
 
+class MerchantChatRequest(BaseModel):
+    message: str = Field(..., min_length=1)
+    session_id: Optional[str] = None
+    conversation_history: list[ConversationItem] = Field(default_factory=list)
+
+
+class MerchantChatResponse(BaseModel):
+    answer: str
+    focus: str
+    chart_directive: dict[str, Any]
+    image_analysis: Optional[dict[str, Any]] = None
+    llm_used: bool = False
+    llm_provider: Optional[str] = None
+    context_used: dict[str, Any] = Field(default_factory=dict)
+
+
 class ToolTrace(BaseModel):
     tool_name: str
     input: Any
