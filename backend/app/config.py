@@ -42,6 +42,9 @@ class Settings:
         self.llm_timeout_seconds = float(get("LLM_TIMEOUT_SECONDS", "6") or "6")
         self.llm_cache_enabled = get("LLM_CACHE_ENABLED", "true").lower() not in {"0", "false", "no"}
         self.llm_cache_ttl_seconds = int(get("LLM_CACHE_TTL_SECONDS", str(60 * 60 * 24)) or str(60 * 60 * 24))
+        self.llm_semantic_cache_enabled = get("LLM_SEMANTIC_CACHE_ENABLED", "true").lower() not in {"0", "false", "no"}
+        self.llm_semantic_cache_threshold = float(get("LLM_SEMANTIC_CACHE_THRESHOLD", "0.88") or "0.88")
+        self.llm_semantic_cache_max_candidates = int(get("LLM_SEMANTIC_CACHE_MAX_CANDIDATES", "80") or "80")
 
         self.llm_chat_provider = get("LLM_CHAT_PROVIDER", self.llm_provider)
         self.llm_chat_model = get("LLM_CHAT_MODEL", self.llm_model)

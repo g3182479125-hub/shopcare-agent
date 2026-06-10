@@ -29,6 +29,7 @@ from app.security import create_access_token, decode_access_token
 from app.services.account_service import AccountService
 from app.services.conversation_store import ConversationStore
 from app.services.knowledge_base import KnowledgeBase
+from app.services.llm_cache import LLMCache
 from app.services.repository import ShopcareRepository
 
 settings = get_settings()
@@ -78,6 +79,10 @@ def llm_status() -> dict[str, Any]:
     return {
         "cache_enabled": settings.llm_cache_enabled,
         "cache_ttl_seconds": settings.llm_cache_ttl_seconds,
+        "semantic_cache_enabled": settings.llm_semantic_cache_enabled,
+        "semantic_cache_threshold": settings.llm_semantic_cache_threshold,
+        "semantic_cache_max_candidates": settings.llm_semantic_cache_max_candidates,
+        "cache_stats": LLMCache(settings.llm_cache_ttl_seconds).stats(),
         "profiles": {
             "chat": safe_profile(settings.llm_profile("chat")),
             "reason": safe_profile(settings.llm_profile("reason")),

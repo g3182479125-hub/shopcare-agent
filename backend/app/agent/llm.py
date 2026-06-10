@@ -14,7 +14,16 @@ class OptionalLLMClient:
         self.enabled = bool(self.profile_config["api_key"].strip())
         self._client = None
         self._client_key: tuple[str, str] | None = None
-        self.cache = LLMCache(settings.llm_cache_ttl_seconds) if settings.llm_cache_enabled else None
+        self.cache = (
+            LLMCache(
+                settings.llm_cache_ttl_seconds,
+                semantic_enabled=settings.llm_semantic_cache_enabled,
+                semantic_threshold=settings.llm_semantic_cache_threshold,
+                max_candidates=settings.llm_semantic_cache_max_candidates,
+            )
+            if settings.llm_cache_enabled
+            else None
+        )
         self.last_meta = cache_meta(profile, self.profile_config["provider"], self.profile_config["model"], "disabled")
 
     def _ensure_client(self):
@@ -51,6 +60,16 @@ class OptionalLLMClient:
             if cached:
                 self.last_meta = cache_meta(self.profile, self.profile_config["provider"], self.profile_config["model"], "cache")
                 return cached
+            semantic_cached, semantic_score = self.cache.get_semantic(
+                profile=self.profile,
+                provider=self.profile_config["provider"],
+                model=self.profile_config["model"],
+                system=system,
+                user=user,
+            )
+            if semantic_cached:
+                self.last_meta = cache_meta(self.profile, self.profile_config["provider"], self.profile_config["model"], f"semantic_cache:{semantic_score:.2f}")
+                return semantic_cached
 
         client = self._ensure_client()
         if client is None:

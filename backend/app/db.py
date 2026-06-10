@@ -163,6 +163,9 @@ def init_schema(conn: sqlite3.Connection) -> None:
             model TEXT NOT NULL,
             system_hash TEXT NOT NULL,
             user_hash TEXT NOT NULL,
+            semantic_key TEXT,
+            semantic_terms TEXT,
+            prompt_preview TEXT,
             response TEXT NOT NULL,
             hit_count INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -171,6 +174,7 @@ def init_schema(conn: sqlite3.Connection) -> None:
         );
 
         CREATE INDEX IF NOT EXISTS idx_app_llm_cache_expires ON app_llm_cache(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_app_llm_cache_profile_model ON app_llm_cache(profile, provider, model, expires_at);
 
         CREATE TABLE IF NOT EXISTS knowledge_documents (
             id TEXT PRIMARY KEY,
@@ -199,7 +203,23 @@ def init_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_role ON knowledge_chunks(role, document_id);
         """
     )
+    _ensure_columns(
+        conn,
+        "app_llm_cache",
+        {
+            "semantic_key": "TEXT",
+            "semantic_terms": "TEXT",
+            "prompt_preview": "TEXT",
+        },
+    )
     conn.commit()
+
+
+def _ensure_columns(conn: sqlite3.Connection, table: str, columns: dict[str, str]) -> None:
+    existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    for name, definition in columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
 
 
 def _insert_rows(conn: sqlite3.Connection, table: str, rows: list[dict[str, Any]]) -> None:
