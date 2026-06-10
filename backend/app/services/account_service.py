@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import sqlite3
 import uuid
 from typing import Any
 
-from app.db import row_to_dict
+from app.db import is_integrity_error, row_to_dict
 from app.security import hash_password, verify_password
 
 
@@ -12,7 +11,7 @@ VALID_ROLES = {"user", "merchant"}
 
 
 class AccountService:
-    def __init__(self, conn: sqlite3.Connection) -> None:
+    def __init__(self, conn) -> None:
         self.conn = conn
 
     def create_user(self, *, email: str, password: str, username: str, role: str) -> dict[str, Any]:

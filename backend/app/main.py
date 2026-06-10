@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from app.agent.merchant_agent import MerchantAnalyticsAgent
 from app.agent.orchestrator import ShopCareAgent
 from app.config import get_settings
-from app.db import ensure_database, get_connection
+from app.db import database_status, ensure_database, get_connection
 from app.schemas import (
     AuthRequest,
     AuthResponse,
@@ -83,6 +83,7 @@ def health() -> dict[str, str]:
 def llm_status() -> dict[str, Any]:
     return {
         "cache_enabled": settings.llm_cache_enabled,
+        "database": database_status(),
         "cache_ttl_seconds": settings.llm_cache_ttl_seconds,
         "semantic_cache_enabled": settings.llm_semantic_cache_enabled,
         "semantic_cache_threshold": settings.llm_semantic_cache_threshold,

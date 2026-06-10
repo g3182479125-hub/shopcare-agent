@@ -108,11 +108,14 @@ class LLMCache:
         semantic_key = hashlib.sha256(" ".join(terms).encode("utf-8")).hexdigest() if terms else None
         try:
             with get_connection() as conn:
+                existing = conn.execute("SELECT hit_count FROM app_llm_cache WHERE cache_key = ?", [cache_key]).fetchone()
+                hit_count = int(existing["hit_count"] or 0) if existing else 0
+                conn.execute("DELETE FROM app_llm_cache WHERE cache_key = ?", [cache_key])
                 conn.execute(
                     """
-                    INSERT OR REPLACE INTO app_llm_cache
+                    INSERT INTO app_llm_cache
                     (cache_key, profile, provider, model, system_hash, user_hash, semantic_key, semantic_terms, prompt_preview, response, hit_count, updated_at, expires_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT hit_count FROM app_llm_cache WHERE cache_key = ?), 0), CURRENT_TIMESTAMP, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
                     """,
                     [
                         cache_key,
@@ -125,7 +128,7 @@ class LLMCache:
                         json.dumps(terms, ensure_ascii=False),
                         normalize_prompt(user)[:500],
                         response,
-                        cache_key,
+                        hit_count,
                         now + self.ttl_seconds,
                     ],
                 )

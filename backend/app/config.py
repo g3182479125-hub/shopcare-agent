@@ -30,6 +30,13 @@ class Settings:
         self.app_name = get("APP_NAME", "ShopCare Agent")
         self.app_env = get("APP_ENV", "local")
         self.shopcare_db_path = get("SHOPCARE_DB_PATH", "./data/shopcare.db")
+        self.database_url = get("DATABASE_URL", "")
+        self.mysql_host = get("MYSQL_HOST", "")
+        self.mysql_port = int(get("MYSQL_PORT", "3306") or "3306")
+        self.mysql_user = get("MYSQL_USER", "")
+        self.mysql_password = get("MYSQL_PASSWORD", "")
+        self.mysql_database = get("MYSQL_DATABASE", "shopcare_agent")
+        self.mysql_ssl_disabled = get("MYSQL_SSL_DISABLED", "false").lower() in {"1", "true", "yes"}
         self.order_csv_path = get("ORDER_CSV_PATH")
         self.user_csv_path = get("USER_CSV_PATH")
         self.aftersales_csv_path = get("AFTERSALES_CSV_PATH", "E:/agnet/aftersales_cases.csv")
@@ -66,8 +73,8 @@ class Settings:
         self.auth_secret = get("AUTH_SECRET", get("SECRET_KEY", "shopcare-local-dev-secret"))
         self.auth_token_expires_seconds = int(get("AUTH_TOKEN_EXPIRES_SECONDS", str(60 * 60 * 24 * 7)))
 
-        self.web_search_enabled = get("WEB_SEARCH_ENABLED", "false").lower() in {"1", "true", "yes", "on"}
-        self.web_search_provider = get("WEB_SEARCH_PROVIDER", "serpapi")
+        self.web_search_enabled = get("WEB_SEARCH_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
+        self.web_search_provider = get("WEB_SEARCH_PROVIDER", "auto")
         self.web_search_api_key = get("WEB_SEARCH_API_KEY", get("SERPAPI_API_KEY", ""))
         self.web_search_base_url = get("WEB_SEARCH_BASE_URL", "https://serpapi.com/search.json")
         self.web_search_timeout_seconds = float(get("WEB_SEARCH_TIMEOUT_SECONDS", "8") or "8")
