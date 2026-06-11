@@ -8,7 +8,6 @@ ShopCare Agent 是一个面向电商售后的智能问答与决策系统。项�
 - 采用 ReAct 思路组织 Agent：识别意图、查询订单、查询用户、检索案例、检索政策、生成售后决策。
 - 支持 DeepSeek/OpenAI 兼容 API；没有 API Key 时仍可用规则引擎兜底。
 - 前端展示 Agent 工具调用轨迹，方便面试时解释系统不是简单聊天机器人。
-- 支持公网部署：后端 Render/Railway，前端 Vercel。
 
 ## 在线演示
 
@@ -94,17 +93,7 @@ KIMI_MODEL=moonshot-v1-8k-vision-preview
 
 没有配置 `KIMI_API_KEY` 或 Kimi 调用失败时，系统会在工具轨迹中记录错误，并继续执行原有售后决策流程。
 
-## 公网部署
 
-具体步骤见 `docs/deployment.md`。推荐：
-
-- 后端：Render Web Service 或 Vercel FastAPI 后端
-- 前端：Vercel
-- 线上 demo 数据：`backend/app/data/demo_seed.json` 自动初始化
-
-## 简历描述建议
-
-设计并实现 ShopCare Agent 电商售后智能决策系统，基于 38 万订单、9.8 万用户及 4 万售后工单构建业务数据底座；采用 ReAct 工具调用流程，实现订单查询、用户画像、相似案例检索、售后政策 RAG、退款/退货/换货/补发/人工升级决策，并通过前端展示 Agent 调用轨迹和决策依据。系统采用 FastAPI + React + SQLite 工程化实现，支持 DeepSeek/OpenAI 兼容 API 扩展和公网部署。
 
 ## Agent Runtime 优化
 
