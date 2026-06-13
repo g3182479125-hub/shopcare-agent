@@ -21,6 +21,7 @@ dist/
 backend/data/*.db
 backend/data/*.sqlite
 backend/data/import_report.json
+backend/data/mysql_import_report.json
 *.csv
 *.xlsx
 *.parquet

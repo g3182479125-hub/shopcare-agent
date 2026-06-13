@@ -1866,7 +1866,17 @@
         return '收到。我会把这句话作为本次售后会话的上下文继续判断。为了更快处理，您可以补充：商品是否影响使用、是否有照片凭证、希望退款还是换货。';
       };
 
-      const API_BASE = 'https://shopcare-agent-api.vercel.app';
+      const SHOPCARE_REMOTE_API_BASE = 'https://shopcare-agent-api.vercel.app';
+      const SHOPCARE_LOCAL_API_BASE = 'http://localhost:8000';
+      const resolveApiBase = () => {
+        if (window.SHOPCARE_API_BASE) return window.SHOPCARE_API_BASE;
+        const host = window.location.hostname;
+        if (host === 'localhost' || host === '127.0.0.1' || host === '') return SHOPCARE_LOCAL_API_BASE;
+        return SHOPCARE_REMOTE_API_BASE;
+      };
+      window.ShopCareResolveApiBase = resolveApiBase;
+
+      const API_BASE = resolveApiBase();
       const ORDER_ID = '3000029';
       const conversationHistory = [];
       const authHeaders = () => window.ShopCareAuth?.authHeaders?.() || {};
@@ -2307,7 +2317,7 @@
       const percent = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`;
       const clean = (value) => (value || '').replace(/\s+/g, ' ').trim();
 
-      const MERCHANT_API_BASE = 'https://shopcare-agent-api.vercel.app';
+      const MERCHANT_API_BASE = window.ShopCareResolveApiBase();
       const FOCUS_TO_CHART = {
         overview: 'monthly',
         gmv: 'monthly',
@@ -2733,7 +2743,7 @@
 
   <script>
     (() => {
-      const API_BASE = 'https://shopcare-agent-api.vercel.app';
+      const API_BASE = window.ShopCareResolveApiBase();
       const landingFrame = document.getElementById('landingFrame');
       const roleGateway = document.getElementById('roleGateway');
       const serviceApp = document.getElementById('serviceApp');

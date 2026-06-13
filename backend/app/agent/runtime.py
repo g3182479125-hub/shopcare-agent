@@ -111,7 +111,13 @@ def detect_conversation_intent(message: str) -> str | None:
     thanks_words = ["谢谢", "感谢", "辛苦了", "太好了", "好的谢谢"]
     help_words = ["怎么用", "如何使用", "怎么操作", "流程是什么", "我该怎么做"]
 
-    if compact in confirm_words or any(word in compact for word in ["帮我提交", "提交吧", "你操作吧", "按这个来"]):
+    if compact in confirm_words or any(
+        word in compact
+        for word in [
+            "帮我提交", "提交吧", "你操作吧", "按这个来",
+            "转接吧", "你来转接", "转人工吧", "人工吧", "帮我转", "帮我联系人工",
+        ]
+    ):
         return "confirm"
     if any(word in compact for word in identity_words):
         return "identity"
@@ -122,8 +128,14 @@ def detect_conversation_intent(message: str) -> str | None:
     if any(word in compact for word in help_words):
         return "help"
 
-    # Very short non-business utterances are usually conversational turns.
-    business_words = ["退", "换", "坏", "破", "物流", "发票", "赔", "订单", "照片", "图片", "退款", "退货", "地址", "寄回", "寄到", "收货", "学校", "宿舍", "电话"]
-    if len(compact) <= 8 and not extract_order_from_text(compact) and not any(word in compact for word in business_words):
+    followup_words = [
+        "问题", "不懂", "听不懂", "什么意思", "为什么", "不对", "错了", "大问题", "有问题",
+        "哪里", "怎么", "咋", "?", "？", "投诉", "人工", "转接", "退款", "退货", "换货",
+    ]
+    if compact in {"?", "？", "??", "？？"} or any(word in compact for word in followup_words):
+        return None
+
+    casual_words = ["在", "在吗", "在不在", "你好", "您好", "hello", "hi", "哈喽", "喂"]
+    if compact in casual_words:
         return "smalltalk"
     return None

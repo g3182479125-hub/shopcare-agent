@@ -184,23 +184,28 @@ class ShopCareAgent:
                 break
 
         last_order_id = resolved_order_id or context_snapshot.get("last_order_id")
-        looks_like_approval = any(
+        looks_like_handoff = any(
             word in recent_assistant
-            for word in ["可以吗", "我这就", "提交", "申请", "退款", "换货", "处理结论", "回复“可以”", "回复\"可以\""]
+            for word in ["人工", "转接", "客服", "复核", "食品安全", "人工处理"]
         )
-        if looks_like_approval:
-            order_part = f"订单 {last_order_id} " if last_order_id else "这次售后 "
-            answer = (
-                f"可以，我已经把{order_part}按刚才的结论整理好了：当前可以进入售后申请/商家审核这一步。"
-                "我会保留前面的图片和聊天上下文，后面你继续问“进度到哪了”或者“改成人工处理”，我都能接着这单往下说。\n\n"
-                "这里先说明一下：现在演示系统还没有接入真实电商后台的打款接口，所以我不会假装已经退款到账；接入后台后，这一步就可以变成真正的提交退款/换货工单。"
-            )
-            summary = "承接上一轮确认"
+        looks_like_action = any(
+            word in recent_assistant
+            for word in ["可以吗", "我这就", "提交", "申请", "退款", "换货", "处理结论", "我帮你", "回复“可以”", "回复\"可以\""]
+        )
+
+        if looks_like_handoff:
+            answer = "转接了，稍等一下。"
+            summary = "承接人工转接确认"
+        elif looks_like_action:
+            if any(word in recent_assistant for word in ["退款", "不用寄回", "退 ", "退到"]):
+                answer = "提交了，后面看审核结果。"
+            elif "换货" in recent_assistant:
+                answer = "提交了，等仓库确认换货。"
+            else:
+                answer = "提交了，后面我会接着这单看进度。"
+            summary = "承接上一轮动作确认"
         else:
-            answer = (
-                "好，我在。你可以直接把订单号、问题描述或者图片发我，我会接着当前会话继续判断，"
-                "不用从头再讲一遍。"
-            )
+            answer = "我在，接着说。"
             summary = "普通确认"
 
         tools.record_trace(
@@ -249,7 +254,7 @@ class ShopCareAgent:
             "greeting": "我在呢。你把订单号和遇到的问题发我就行；如果商品有破损，也可以直接传照片，我会结合订单和售后规则一起帮你判断。",
             "thanks": "不客气，这事我继续帮你盯着。后面你只要补一句“我要退款”或者“我想换货”，我会接着前面的订单继续处理。",
             "help": "你可以这样用：先发订单号和问题，比如“3000029 包装破损想退款”；如果有照片就一起上传。之后你可以直接追问“那能换货吗”“要不要人工”，我会记住前面的上下文继续回答。",
-            "smalltalk": "我在。你可以直接说遇到的售后问题，我会按当前订单和前面的聊天继续帮你判断。",
+            "smalltalk": "我在，接着说。",
         }
         answer = answers.get(intent, answers["smalltalk"])
         tools.record_trace(

@@ -16,7 +16,7 @@ INTENT_KEYWORDS = {
     "exchange": ["换货", "换码", "尺码", "型号不对", "颜色不对", "换新"],
     "reship": ["少发", "漏发", "缺失", "配件", "赠品", "补发"],
     "logistics": ["物流", "快递", "没收到", "签收", "配送", "超时"],
-    "quality": ["坏", "故障", "破损", "质量", "不能用", "漏液", "不新鲜", "过敏", "异常", "损坏"],
+    "quality": ["坏", "故障", "破损", "质量", "不能用", "漏液", "不新鲜", "过敏", "异常", "损坏", "拉肚子", "腹泻", "吃坏", "食物中毒", "肚子疼"],
     "invoice": ["发票", "抬头", "税号"],
     "complaint": ["投诉", "人工", "客服", "赔偿", "补偿"],
 }
@@ -157,16 +157,44 @@ def decide_aftersales(*, message: str, intent: str, order: dict[str, Any] | None
         return decision
 
     is_food = any(word in category for word in ["食品", "生鲜", "饮料"])
-    if is_food and (intent in {"quality", "refund"} or has_valid_image_evidence):
+    food_safety_risk = is_food and any(
+        word in message
+        for word in ["拉肚子", "腹泻", "吃坏", "食物中毒", "肚子疼", "不舒服"]
+    )
+    if food_safety_risk:
         decision.update(
-            status="approved" if has_valid_image_evidence else "need_info",
-            resolution="refund_only",
-            refund_amount=round(amount if has_valid_image_evidence else amount * 0.8, 2),
-            compensation_amount=10.0 if has_valid_image_evidence else 0.0,
-            need_human_review=amount >= 5000,
-            reason="食品类商品涉及新鲜度、包装破损或食用安全，凭有效图片证据可优先仅退款或补偿。",
-            next_steps=["保留商品和包装照片", "核验后发起仅退款", "必要时追加补偿券"],
+            status="escalated",
+            resolution="manual_review",
+            priority="P1",
+            refund_amount=0.0,
+            compensation_amount=0.0,
+            need_human_review=True,
+            reason="涉及食品安全或食用不适，需要人工复核后处理。",
+            next_steps=["暂停食用", "保留商品和包装", "转人工客服复核"],
         )
+        return decision
+
+    if is_food and (intent in {"quality", "refund"} or has_valid_image_evidence):
+        if has_valid_image_evidence:
+            decision.update(
+                status="approved",
+                resolution="refund_only",
+                refund_amount=round(amount, 2),
+                compensation_amount=10.0,
+                need_human_review=amount >= 5000,
+                reason="食品类商品有有效图片凭证，可以优先仅退款或补偿。",
+                next_steps=["保留商品和包装照片", "核验后发起仅退款", "必要时追加补偿券"],
+            )
+        else:
+            decision.update(
+                status="need_info",
+                resolution="need_evidence",
+                refund_amount=0.0,
+                compensation_amount=0.0,
+                need_human_review=amount >= 5000,
+                reason="食品生鲜不支持直接无理由退，需要先说明问题并补充照片或其他凭证。",
+                next_steps=["说明是变质、破损、漏发还是其他问题", "上传商品和包装照片", "核验后再给处理方案"],
+            )
         return decision
 
     if any(word in category for word in ["美妆", "护肤"]) and any(word in message for word in ["过敏", "不适", "红肿"]):
